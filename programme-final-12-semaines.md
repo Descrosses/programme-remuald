@@ -132,7 +132,7 @@ Progression : +2,5 kg quand les 3 reps de toutes les séries sont rapides.
 
 **G. Explosive Cable Row — 3 × 5** — RPE 6 — Repos 75 s — Tirer vite, retour contrôlé.
 
-**H. Farmer Carry — 4 × 25 m, haltères 2 × 34 kg** — Repos 90 s — Buste haut, marche agressive.
+**H. Farmer Carry — 4 × 25 m, haltères 2 × 34 kg** — Repos 90 s — **DEUX haltères, une dans chaque main.** Charge symétrique, buste haut, marche agressive. À ne pas confondre avec le Suitcase Carry du samedi, qui se porte d'un seul côté.
 Progression : +2 kg quand les 25 m sont tenus sans ralentir.
 
 **I. Dead Bug avec câble — 3 × 6/côté** — Repos 45 s — Anti-extension.
@@ -157,7 +157,7 @@ Chaque rep part du sol, pas de touch-and-go. Hanches hautes, tension avant déco
 
 **G. Copenhagen Plank dynamique — 3 × 8/côté** — Repos 60 s — Pied supérieur sur banc, monte et descends le bassin.
 
-**H. Suitcase Carry — 3 × 30 m/côté, 32 kg** — Repos 60 s — Zéro inclinaison.
+**H. Suitcase Carry — 3 × 30 m/côté, 32 kg** — Repos 60 s — **UNE SEULE haltère, comme une valise**, puis l'autre côté. Zéro inclinaison : c'est le déséquilibre qui fait travailler le tronc, le porter à deux mains supprime l'exercice. À ne pas confondre avec le Farmer Carry du vendredi, qui se porte à deux mains.
 
 ---
 

@@ -59,16 +59,29 @@ function estAvant(a: Seance, b: Seance): boolean {
 export interface LastPerformance {
   /** Semaine de la dernière occurrence réelle. */
   week: number;
-  /** « 77,5 kg », « 235 cm », « 1,78 s ». */
+  /**
+   * « 77,5 kg », « 235 cm », et pour un porté les DEUX métriques :
+   * « 40 m · 32 kg ».
+   */
   value: string;
   /** « RPE 7 », ou `null` quand aucun RPE n'a été saisi ce jour-là. */
   rpe: string | null;
-  /** « +2,5 kg », ou `null` s'il n'y a rien à quoi comparer. */
+  /**
+   * « +2,5 kg », « +10 m · +2 kg » sur un porté dont les deux métriques ont
+   * bougé, ou `null` s'il n'y a rien à quoi comparer.
+   */
   delta: string | null;
   trend: Trend;
 }
 
-/** Ce qu'on compare sur ce mouvement : des kilos, ou une mesure. */
+/**
+ * Une métrique suivie sur ce mouvement.
+ *
+ * La plupart n'en ont qu'une — des kilos, ou une distance. Les portés en ont
+ * DEUX, distance et charge, et les deux progressent : le Suitcase Carry se
+ * fait à 32 kg sur 30 m, puis à 32 kg sur 40 m. N'en montrer qu'une revenait à
+ * dire la moitié de ce qu'il avait fait.
+ */
 interface Champ {
   lire: (o: Occurrence) => number | null;
   unit: string;
@@ -112,49 +125,73 @@ export function lastPerformance(
   if (faites.length === 0) return null;
 
   const derniere = faites[faites.length - 1]!;
-  const champ = champDe(derniere, opts.measureUnit ?? null);
-  if (champ === null) return null;
+  const champs = champsDe(derniere, opts.measureUnit ?? null);
+  if (champs.length === 0) return null;
 
-  const valeur = champ.lire(derniere);
-  if (valeur === null) return null;
+  const lues = champs
+    .map((champ) => ({ champ, valeur: champ.lire(derniere)! }))
+    .filter((x) => x.valeur !== null);
+  if (lues.length === 0) return null;
+
+  const ecarts = lues.map(({ champ, valeur }) => {
+    /*
+     * L'occurrence de référence est la dernière AVANT celle-ci qui portait
+     * cette métrique — chacune remonte à son propre rythme. On ne va pas plus
+     * loin qu'il ne faut : ce qui intéresse Guillaume est « depuis la dernière
+     * fois », pas « depuis le début ».
+     */
+    const precedente = faites
+      .slice(0, -1)
+      .reverse()
+      .find((o) => champ.lire(o) !== null);
+    const avant = precedente ? champ.lire(precedente) : null;
+    const ecart = avant === null ? null : arrondi(valeur - avant);
+    return { champ, ecart, trend: tendance(ecart, opts.exerciseId) };
+  });
 
   /*
-   * L'occurrence de référence est la dernière AVANT celle-ci qui portait le
-   * même genre de valeur. On ne remonte pas plus loin qu'il ne faut : ce qui
-   * intéresse Guillaume est « depuis la dernière fois », pas « depuis le
-   * début ».
+   * Avec deux métriques, la flèche suit l'ensemble : verte si au moins une a
+   * progressé et qu'aucune n'a reculé. Si l'une monte pendant que l'autre
+   * descend — plus loin mais moins lourd — on reste neutre et on affiche les
+   * deux écarts : c'est à Guillaume de juger, pas à une flèche.
    */
-  const precedente = faites
-    .slice(0, -1)
-    .reverse()
-    .find((o) => champ.lire(o) !== null);
-  const avant = precedente ? champ.lire(precedente) : null;
+  const monte = ecarts.some((e) => e.trend === 'up');
+  const descend = ecarts.some((e) => e.trend === 'down');
+  const trend: Trend = monte && !descend ? 'up' : !monte && descend ? 'down' : 'flat';
 
-  const ecart = avant === null ? null : arrondi(valeur - avant);
-  const trend = tendance(ecart, opts.exerciseId);
+  const rpeChamp = lues.find((x) => x.champ.avecRPE);
+  const deltas = ecarts
+    .filter((e) => e.ecart !== null && e.ecart !== 0)
+    .map((e) => `${e.ecart! > 0 ? '+' : '−'}${fr(Math.abs(e.ecart!))} ${e.champ.unit}`);
 
   return {
     week: derniere.week,
-    value: `${fr(valeur)} ${champ.unit}`,
-    rpe: champ.avecRPE && derniere.rpe !== null ? `RPE ${fr(derniere.rpe)}` : null,
-    delta: ecart === null || ecart === 0 ? null : `${ecart > 0 ? '+' : '−'}${fr(Math.abs(ecart))} ${champ.unit}`,
+    value: lues.map(({ champ, valeur }) => `${fr(valeur)} ${champ.unit}`).join(' · '),
+    rpe: rpeChamp && derniere.rpe !== null ? `RPE ${fr(derniere.rpe)}` : null,
+    delta: deltas.length === 0 ? null : deltas.join(' · '),
     trend,
   };
 }
 
 /**
- * Kilos d'abord, mesure ensuite.
+ * Les métriques que porte cette occurrence — une, ou deux.
  *
- * Un Speed Squat se compte en kilos et n'a pas de RPE cible : il tombe donc
- * naturellement dans le premier cas, avec sa charge et sans RPE. Un Broad Jump
- * n'a pas de kilos mais une distance : c'est elle qui compte.
+ * La distance d'abord, la charge ensuite : c'est l'ordre dans lequel un porté
+ * se décrit, « 40 m à 32 kg », et l'ordre des champs de saisie juste en
+ * dessous.
+ *
+ * Un Speed Squat n'a que des kilos, et pas de RPE cible : il ressort avec sa
+ * seule charge, sans RPE. Un Broad Jump n'a qu'une distance. Un Suitcase Carry
+ * a les deux, et c'est le cas qui manquait : l'ancienne version choisissait la
+ * charge et s'arrêtait là, laissant les 40 m parcourus invisibles.
  */
-function champDe(o: Occurrence, measureUnit: string | null): Champ | null {
-  if (o.kg !== null) return { lire: (x) => x.kg, unit: 'kg', avecRPE: true };
+function champsDe(o: Occurrence, measureUnit: string | null): Champ[] {
+  const champs: Champ[] = [];
   if (o.measure !== null && o.measure !== undefined && measureUnit) {
-    return { lire: (x) => x.measure ?? null, unit: measureUnit, avecRPE: false };
+    champs.push({ lire: (x) => x.measure ?? null, unit: measureUnit, avecRPE: false });
   }
-  return null;
+  if (o.kg !== null) champs.push({ lire: (x) => x.kg, unit: 'kg', avecRPE: true });
+  return champs;
 }
 
 /**

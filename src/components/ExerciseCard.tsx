@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import type { SetRow } from '../db/db';
-import { fr, loadLine, restLabel } from '../engine/format';
+import { fr, gripHint, loadLine, restLabel } from '../engine/format';
 import type { ResolvedExercise } from '../engine/getSession';
 import type { RestTimer } from '../state/useRestTimer';
 import { ExerciseMediaButton, type MediaContext } from './ExerciseMedia';
@@ -101,6 +101,14 @@ export function ExerciseCard({
           )}
           {overrideKg !== null && <span style={{ color: 'var(--accent)' }}>charge ajustée</span>}
         </div>
+
+        {/*
+          Le rappel « une ou deux haltères », juste sous la ligne de charge :
+          l'endroit qu'on lit avant d'aller chercher le matériel. Deux portés
+          du programme se ressemblent — Farmer à deux mains le vendredi,
+          Suitcase à une main le samedi — et se confondent sans ça.
+        */}
+        {gripHint(ex.load) && <div className={styles.gripHint}>{gripHint(ex.load)}</div>}
 
         {ex.contrast && (
           <div className={styles.adjust}>
@@ -358,7 +366,19 @@ function SetEntry({
   const entry = loadEntryFor(ex, saved?.actualKg ?? (plannedKg ?? undefined));
   const [kg, setKg] = useState<number | null>(entry.initialKg);
   const [rpeValue, setRpe] = useState<number>(saved?.actualRpe ?? ex.targetRPE?.max ?? 7);
-  const [value, setValue] = useState<number>(saved?.measureValue ?? measure?.min ?? 0);
+  /*
+   * Le champ de mesure s'ouvre sur ce qui a le plus de chances d'être juste,
+   * dans cet ordre : ce qui a déjà été saisi pour cette série, la valeur que
+   * le plan prescrit, la dernière réellement faite, et seulement en dernier
+   * recours le minimum du curseur.
+   *
+   * Il démarrait au minimum. Valider un Suitcase Carry sans toucher au
+   * curseur enregistrait donc 5 m au lieu des 30 m du plan — et l'encart de
+   * comparaison répétait ensuite ce 5 m semaine après semaine.
+   */
+  const [value, setValue] = useState<number>(
+    saved?.measureValue ?? plannedMeasureOf(ex) ?? ex.lastMeasure ?? measure?.min ?? 0,
+  );
   const [failed, setFailed] = useState<boolean>(saved?.failed ?? false);
 
   // Quand la charge du plan change — suggestion acceptée, feu tricolore, charge
@@ -533,6 +553,17 @@ function SetEntry({
 }
 
 // ---------------------------------------------------------------------------
+
+/**
+ * La mesure que le programme prescrit, quand il en prescrit une.
+ *
+ * Les portés sont chiffrés en mètres par le plan (« 4 × 25 m »), donc la
+ * valeur existe. Un saut, non : le programme ne dit pas à quelle distance
+ * sauter, c'est la mesure du jour. D'où le repli sur la dernière réalisée.
+ */
+function plannedMeasureOf(ex: ResolvedExercise): number | null {
+  return ex.work.kind === 'distance' ? ex.work.meters : null;
+}
 
 function plannedRepsOf(ex: ResolvedExercise): number | null {
   if (ex.work.kind !== 'reps') return null;

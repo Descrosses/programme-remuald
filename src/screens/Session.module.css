@@ -725,3 +725,20 @@
   color: var(--vert);
   font-weight: 600;
 }
+
+/* --- Combien d'haltères ---------------------------------------------------- */
+
+/*
+ * Assez visible pour être lu sans le chercher, assez sobre pour ne pas
+ * concurrencer la ligne de charge. Il se lit avant d'aller au rack.
+ */
+.gripHint {
+  margin: 6px var(--pad) 0;
+  padding: 5px 9px;
+  border-left: 3px solid var(--accent);
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+  background: var(--surface-2);
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--ink-2);
+}

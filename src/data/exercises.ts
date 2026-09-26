@@ -259,8 +259,11 @@ const LIST: ExerciseDef[] = [
     fn: 'carry',
     role: 'carry',
     measure: 'm',
-    intent: 'Buste haut, marche agressive.',
+    intent: 'DEUX haltères, une dans chaque main. Charge symétrique, buste haut, marche agressive.',
     progressionRule: '+2 kg quand les 25 m sont tenus sans ralentir.',
+    cues: [
+      'Ne pas confondre avec le Suitcase Carry du samedi : celui-là se porte d’un seul côté.',
+    ],
   }),
   def({
     id: 'dead-bug-cable',
@@ -333,7 +336,12 @@ const LIST: ExerciseDef[] = [
     fn: 'carry',
     role: 'carry',
     measure: 'm',
-    intent: 'Zéro inclinaison. Regarde droit devant.',
+    intent:
+      'UNE SEULE haltère, comme une valise, puis l’autre côté. Zéro inclinaison, regarde droit devant.',
+    cues: [
+      'C’est le déséquilibre qui fait travailler le tronc : le porter à deux mains supprime l’exercice.',
+      'Ne pas confondre avec le Farmer Carry du vendredi : celui-là se porte à deux mains.',
+    ],
   }),
 
   // -------------------------------------------------------------- DIMANCHE --

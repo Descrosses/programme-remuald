@@ -72,6 +72,25 @@ export function loadLabel(load: ResolvedLoad): string {
 }
 
 /**
+ * Combien d'haltères, et comment — dit avant de se baisser vers le rack.
+ *
+ * Guillaume s'est trompé de porté : il a fait le Farmer Carry à la place du
+ * Suitcase Carry. Les deux se ressemblent à l'écran — marcher avec des
+ * haltères — et rien ne les distinguait au moment où ça compte, c'est-à-dire
+ * en attrapant la charge.
+ *
+ * Le rappel est DÉDUIT de la forme de charge, jamais écrit exercice par
+ * exercice : `dbPair` veut dire deux haltères, `dbSingle` une seule. Un
+ * mouvement à une haltère ne peut donc pas oublier son rappel, et corriger la
+ * formulation la corrige partout.
+ */
+export function gripHint(load: ResolvedLoad): string | null {
+  if (load.shape === 'dbPair') return '2 haltères — une dans chaque main';
+  if (load.shape === 'dbSingle') return '1 SEULE haltère — un côté à la fois';
+  return null;
+}
+
+/**
  * La grande ligne : « 5 × 3 × 115 kg », « 3 × 8 / jambe — 2 × 18 kg ».
  * Le séparateur change pour les paires d'haltères, sinon on lirait
  * « 3 × 8 / jambe × 2 × 18 kg ».
