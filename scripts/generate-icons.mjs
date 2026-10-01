@@ -18,8 +18,8 @@ import { fileURLToPath } from 'node:url';
 
 const OUT = join(dirname(fileURLToPath(import.meta.url)), '..', 'public', 'icons');
 
-const BG = [0x0d, 0x10, 0x14]; // --bg
-const BAR = [0xff, 0xb6, 0x28]; // --accent
+const BG = [0x0b, 0x2a, 0x4a]; // bleu nuit — distingue l'icône de Remuald de l'appli d'origine
+const BAR = [0x3e, 0xc7, 0xff]; // bleu clair
 const PLATE = [0xf4, 0xf7, 0xfa]; // --ink
 
 /** Icônes à produire : [nom, taille, marge relative]. */
