@@ -1,14 +1,14 @@
-# Programme 12 semaines
+# Programme Remuald
 
 Application web installable (PWA) pour suivre le programme de préparation
-physique décrit dans [`programme-final-12-semaines.md`](programme-final-12-semaines.md).
+physique décrit dans [`programme-remuald.md`](programme-remuald.md).
 
 Fonctionne à 100 % hors ligne après la première ouverture. Toutes les données
 restent sur l'appareil : pas de compte, pas de serveur, pas de base distante.
 
 ## Le principe
 
-Le fichier `.md` est la **source de vérité**. Le code ne le réinterprète pas :
+Le fichier `programme-remuald.md` décrit le programme. Le code ne le réinterprète pas :
 
 - `src/data/` transcrit le programme, et rien d'autre — aucune logique.
 - `src/engine/` contient les fonctions pures qui décident (séance du jour,
@@ -16,16 +16,14 @@ Le fichier `.md` est la **source de vérité**. Le code ne le réinterprète pas
 - `src/db/` stocke ce qui a réellement été fait.
 - `src/screens/` et `src/components/` affichent.
 
-Les tests de `src/data/mainLiftTable.test.ts` **relisent le fichier `.md`** et
-comparent le tableau de la section 9 case par case. Si le programme change, ou
-si la transcription dérive, le déploiement échoue.
+Les tests de `src/data/program.test.ts` vérifient que les séances respectent les consignes du programme (aucun saut, RPE ≤ 8, quatre jours).
 
 ## Développement
 
 ```bash
 npm install
 npm run dev        # serveur local
-npm test           # 263 tests
+npm test
 npm run typecheck
 npm run build      # génère dist/ avec le service worker
 ```

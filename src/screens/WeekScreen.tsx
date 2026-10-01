@@ -82,12 +82,12 @@ export function WeekScreen({
   return (
     <div className={styles.screen}>
       <header className={styles.header}>
-        <h1 className={styles.h1}>{week === 0 ? 'Combine initial' : `Semaine ${week}`}</h1>
+        <h1 className={styles.h1}>{week === 0 ? 'Bilan initial' : `Semaine ${week}`}</h1>
         <p className={styles.lead}>
           {week === 0 &&
-            'Six jours de tests avant le programme, espacés pour qu’aucun effort de tirage n’en suive un autre à moins de 48 h. Ton meilleur broad jump du lundi devient ta référence.'}
+            'Bilan initial sur trois jours, sans charge maximale ni saut : il sert de point de départ pour mesurer tes progrès.'}
           {week === 1 &&
-            'Première semaine complète, cinq séances. Tu arrives dessus après un dimanche de repos.'}
+            'Première semaine complète, quatre séances. La technique passe avant la charge.'}
           {week > 1 && block.objective}
         </p>
       </header>

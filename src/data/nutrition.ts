@@ -1,5 +1,5 @@
 /**
- * Plan alimentaire — transcription de `plan-alimentaire-12-semaines.md`.
+ * Plan alimentaire — transcription de `programme-remuald.md (§6)`.
  *
  * Même règle que pour le programme d'entraînement : ce fichier ne contient QUE
  * des données recopiées du .md. Aucun calcul, aucune décision. Ce qui décide
@@ -149,188 +149,148 @@ function ligne(id: string, product: ProductId, qty: number): FoodItem {
 }
 
 // ---------------------------------------------------------------------------
-// §« Journée type — jour d'entraînement »
+// Programme Remuald — jour d'entraînement
+//
+// Contraintes de chantier : poste 7 h 40 → 16 h (parfois 17 h), et RIEN à
+// manger ni à boire entre 8 h 15 et 11 h 45, ni entre 13 h 15 et 15 h 45.
+// Séance à 16 h 10 en semaine (10 h le dimanche).
+//
+// Le repas de 11 h 45 est donc le vrai repas d'avant-séance : il porte les
+// féculents et un dessert sucré. La banane de 15 h 45 n'est qu'un appoint
+// rapide, digéré avant d'arriver à la salle.
 // ---------------------------------------------------------------------------
 
 const REVEIL: Meal = {
-  name: 'Réveil — 6 h',
-  detail: '3 œufs entiers + 3 tranches de pain complet + 20 g de miel + 1 banane',
-  kcal: 644,
+  name: 'Au lever — ≈ 6 h 45',
+  detail: '3 œufs entiers + 3 tranches de pain complet + 1 banane',
+  kcal: 584,
   proteinG: 30,
   items: [
     ligne('t.reveil.oeuf', 'oeuf', 3),
     ligne('t.reveil.pain', 'pain', 105),
-    ligne('t.reveil.miel', 'miel', 20),
     ligne('t.reveil.banane', 'banane', 1),
   ],
 };
 
-const COLLATION_8H: Meal = {
-  name: 'Collation — 8 h',
-  detail: '60 g de flocons d’avoine + 250 ml de lait demi-écrémé, préparés la veille',
-  kcal: 343,
-  proteinG: 16,
-  items: [ligne('t.collation8.flocons', 'flocons', 60), ligne('t.collation8.lait', 'lait', 250)],
-};
-
 /*
- * Seule prise identique aux deux paliers : le même objet sert aux deux, donc
- * ses lignes portent le préfixe « x » et non « t » ou « r ».
+ * Identique aux deux paliers : le même objet sert aux deux, donc ses lignes
+ * portent le préfixe « x ».
  */
-const COLLATION_10H: Meal = {
-  name: 'Collation — 10 h',
-  detail: '280 g de skyr nature + 30 g d’amandes + 1 pomme',
-  kcal: 430,
-  proteinG: 34,
+const AVANT_COUPURE: Meal = {
+  name: 'Avant 8 h 15',
+  detail: '250 g de skyr + 40 g de flocons d’avoine + 1 pomme, préparés la veille dans un bocal',
+  kcal: 390,
+  proteinG: 30,
   items: [
-    ligne('x.collation10.skyr', 'skyr', 280),
-    ligne('x.collation10.amandes', 'amandes', 30),
-    ligne('x.collation10.pomme', 'pomme', 1),
+    ligne('x.avant815.skyr', 'skyr', 250),
+    ligne('x.avant815.flocons', 'flocons', 40),
+    ligne('x.avant815.pomme', 'pomme', 1),
   ],
 };
 
-const DEJEUNER: Meal = {
-  name: 'Déjeuner',
-  detail: '180-200 g de protéine + 300 g de féculent (cuit) + 250 g de légumes + 10 g d’huile d’olive',
-  kcal: 863,
+const MIDI: Meal = {
+  name: 'Entre 11 h 45 et 13 h 15',
+  detail:
+    '180 g de protéine + 300 g de féculent (cuit) + 250 g de légumes + 10 g d’huile, puis 1 tranche de pain + 15 g de miel',
+  kcal: 979,
   proteinG: 67,
   items: [
-    ligne('t.dejeuner.viande', 'viande', 190),
-    ligne('t.dejeuner.feculent', 'feculent', 300),
-    ligne('t.dejeuner.legumes', 'legumes', 250),
-    ligne('t.dejeuner.huile', 'huile', 10),
+    ligne('t.midi.viande', 'viande', 180),
+    ligne('t.midi.feculent', 'feculent', 300),
+    ligne('t.midi.legumes', 'legumes', 250),
+    ligne('t.midi.huile', 'huile', 10),
+    ligne('t.midi.pain', 'pain', 35),
+    ligne('t.midi.miel', 'miel', 15),
   ],
 };
 
+/* Identique aux deux paliers. */
 const AUTOUR_SEANCE: Meal = {
-  name: 'Autour de la séance — 16 h',
-  detail:
-    'Avant (1 h 30) : banane + 2 tranches de pain avec 20 g de miel. Après (45 min) : shaker whey 30 g + 1 pomme',
-  kcal: 542,
-  proteinG: 32,
-  items: [
-    ligne('t.autour.banane', 'banane', 1),
-    ligne('t.autour.pain', 'pain', 70),
-    ligne('t.autour.miel', 'miel', 20),
-    ligne('t.autour.whey', 'whey', 30),
-    ligne('t.autour.pomme', 'pomme', 1),
-  ],
+  name: '15 h 45 → après la séance',
+  detail: 'Dès 15 h 45 : 1 banane + 0,5 L d’eau. Après la séance : shaker whey 30 g',
+  kcal: 227,
+  proteinG: 25,
+  items: [ligne('x.autour.banane', 'banane', 1), ligne('x.autour.whey', 'whey', 30)],
 };
 
 const DINER: Meal = {
-  name: 'Dîner',
-  detail: '180-200 g de protéine + 200 g de féculent (cuit) + 250 g de légumes + 15 g d’huile',
-  kcal: 783,
-  proteinG: 63,
+  name: 'Dîner — ≈ 19 h - 19 h 30',
+  detail: '120 g de protéine (ou 4 œufs) + 200 g de féculent (cuit) + 300 g de légumes + 10 g d’huile',
+  kcal: 634,
+  proteinG: 45,
   items: [
-    ligne('t.diner.viande', 'viande', 190),
+    ligne('t.diner.viande', 'viande', 120),
     ligne('t.diner.feculent', 'feculent', 200),
-    ligne('t.diner.legumes', 'legumes', 250),
-    ligne('t.diner.huile', 'huile', 15),
+    ligne('t.diner.legumes', 'legumes', 300),
+    ligne('t.diner.huile', 'huile', 10),
   ],
 };
 
 const TRAIN: NutritionTarget = {
   kind: 'train',
   label: 'Jour d’entraînement',
-  kcal: 3600,
-  proteinG: 240,
-  carbsG: 425,
-  fatG: 105,
-  note: 'Les glucides se concentrent autour de la séance, pas le soir devant la télé.',
-  meals: [REVEIL, COLLATION_8H, COLLATION_10H, DEJEUNER, AUTOUR_SEANCE, DINER],
+  kcal: 2800,
+  proteinG: 195,
+  carbsG: 345,
+  fatG: 70,
+  note: 'Le repas de midi est ton vrai repas d’avant-séance : ne le saute jamais. Dimanche (séance à 10 h) : mêmes aliments, petit-déjeuner 2 h avant.',
+  meals: [REVEIL, AVANT_COUPURE, MIDI, AUTOUR_SEANCE, DINER],
 };
 
 // ---------------------------------------------------------------------------
-// §« Journée type — jour de repos (mardi, jeudi) »
+// Jour de repos (mercredi, vendredi, samedi)
 //
-// Six prises aussi, et non cinq : Guillaume préfère manger au même rythme tous
-// les jours et se servir un peu moins, plutôt que sauter une prise. Sauter la
-// prise de 16 h aurait été plus simple à écrire, mais ça crée un jour qui ne
-// ressemble à aucun autre, donc un jour qu'on oublie de suivre.
-//
-// Ce qui baisse : le pain, les flocons, les féculents, le miel — les glucides,
-// parce que c'est la dépense de la séance qui disparaît. Ce qui ne bouge PAS :
-// la viande, le poisson, les œufs, le skyr, les amandes, l'huile. Le besoin de
-// construire du muscle, lui, ne prend pas de jour de repos.
+// Mêmes cinq prises, mêmes protéines : on retire seulement des féculents et le
+// dessert sucré de midi, c'est la dépense de la séance qui disparaît.
 // ---------------------------------------------------------------------------
 
 const REVEIL_REPOS: Meal = {
-  name: 'Réveil — 6 h',
-  detail: '3 œufs entiers + 2 tranches de pain complet + 20 g de miel + 1 banane',
-  kcal: 557,
+  name: 'Au lever — ≈ 6 h 45',
+  detail: '3 œufs entiers + 2 tranches de pain complet + 1 banane',
+  kcal: 497,
   proteinG: 27,
   items: [
     ligne('r.reveil.oeuf', 'oeuf', 3),
     ligne('r.reveil.pain', 'pain', 70),
-    ligne('r.reveil.miel', 'miel', 20),
     ligne('r.reveil.banane', 'banane', 1),
   ],
 };
 
-const COLLATION_8H_REPOS: Meal = {
-  name: 'Collation — 8 h',
-  detail: '40 g de flocons d’avoine + 250 ml de lait demi-écrémé, préparés la veille',
-  kcal: 267,
-  proteinG: 13,
-  items: [ligne('r.collation8.flocons', 'flocons', 40), ligne('r.collation8.lait', 'lait', 250)],
-};
-
-const DEJEUNER_REPOS: Meal = {
-  name: 'Déjeuner',
-  detail: '180-200 g de protéine + 200 g de féculent (cuit) + 250 g de légumes + 10 g d’huile d’olive',
-  kcal: 738,
-  proteinG: 63,
+const MIDI_REPOS: Meal = {
+  name: 'Entre 11 h 45 et 13 h 15',
+  detail: '180 g de protéine + 200 g de féculent (cuit) + 250 g de légumes + 10 g d’huile',
+  kcal: 721,
+  proteinG: 61,
   items: [
-    ligne('r.dejeuner.viande', 'viande', 190),
-    ligne('r.dejeuner.feculent', 'feculent', 200),
-    ligne('r.dejeuner.legumes', 'legumes', 250),
-    ligne('r.dejeuner.huile', 'huile', 10),
-  ],
-};
-
-const COLLATION_16H_REPOS: Meal = {
-  name: 'Collation — 16 h',
-  detail: '1 banane + 1 tranche de pain avec 10 g de miel + shaker whey 30 g (ou 2 yaourts)',
-  kcal: 345,
-  proteinG: 28,
-  items: [
-    ligne('r.collation16.banane', 'banane', 1),
-    ligne('r.collation16.pain', 'pain', 35),
-    ligne('r.collation16.miel', 'miel', 10),
-    ligne('r.collation16.whey', 'whey', 30),
+    ligne('r.midi.viande', 'viande', 180),
+    ligne('r.midi.feculent', 'feculent', 200),
+    ligne('r.midi.legumes', 'legumes', 250),
+    ligne('r.midi.huile', 'huile', 10),
   ],
 };
 
 const DINER_REPOS: Meal = {
-  name: 'Dîner',
-  detail: '180-200 g de protéine + 150 g de féculent (cuit) + 250 g de légumes + 15 g d’huile',
-  kcal: 721,
-  proteinG: 62,
+  name: 'Dîner — ≈ 19 h - 19 h 30',
+  detail: '120 g de protéine (ou 4 œufs) + 100 g de féculent (cuit) + 300 g de légumes + 10 g d’huile',
+  kcal: 509,
+  proteinG: 42,
   items: [
-    ligne('r.diner.viande', 'viande', 190),
-    ligne('r.diner.feculent', 'feculent', 150),
-    ligne('r.diner.legumes', 'legumes', 250),
-    ligne('r.diner.huile', 'huile', 15),
+    ligne('r.diner.viande', 'viande', 120),
+    ligne('r.diner.feculent', 'feculent', 100),
+    ligne('r.diner.legumes', 'legumes', 300),
+    ligne('r.diner.huile', 'huile', 10),
   ],
 };
 
 const REST: NutritionTarget = {
   kind: 'rest',
   label: 'Jour de repos',
-  kcal: 3050,
-  proteinG: 227,
-  carbsG: 315,
-  fatG: 100,
-  note: 'Ce n’est pas un jour « low carb » : mêmes six prises, mêmes protéines, seuls les féculents baissent.',
-  meals: [
-    REVEIL_REPOS,
-    COLLATION_8H_REPOS,
-    COLLATION_10H, // la seule prise identique aux deux paliers
-    DEJEUNER_REPOS,
-    COLLATION_16H_REPOS,
-    DINER_REPOS,
-  ],
+  kcal: 2350,
+  proteinG: 185,
+  carbsG: 250,
+  fatG: 67,
+  note: 'Mêmes cinq prises, mêmes protéines : seuls les féculents baissent. Ce n’est pas un jour de privation.',
+  meals: [REVEIL_REPOS, AVANT_COUPURE, MIDI_REPOS, AUTOUR_SEANCE, DINER_REPOS],
 };
 
 export const NUTRITION_TARGETS: Record<DayKind, NutritionTarget> = {
@@ -373,20 +333,18 @@ export interface ShoppingGroup {
 export const SHOPPING_LIST: ShoppingGroup[] = [
   {
     title: 'Protéines',
-    items:
-      'Œufs (2 douzaines), poulet ou dinde (1 kg), viande hachée 5 % (500 g), poisson (2-3 pavés), yaourts grecs ou skyr (10), fromage blanc, whey (1 boîte)',
+    items: 'Œufs, poulet ou dinde, bœuf haché 5 %, poisson, skyr, whey',
   },
   {
     title: 'Glucides',
-    items:
-      'Riz, pâtes, pain complet, flocons d’avoine, pommes de terre, patates douces, fruits (bananes, pommes, fruits de saison)',
+    items: 'Riz, pâtes complètes, pain complet, flocons d’avoine, pommes de terre, bananes, pommes, miel',
   },
-  { title: 'Lipides', items: 'Huile d’olive, amandes ou noix, avocat (optionnel)' },
+  { title: 'Lipides', items: 'Huile d’olive ou de colza' },
   {
     title: 'Légumes',
     items: 'En grande quantité, ce qui te plaît — haricots verts, brocolis, carottes, salade, courgettes',
   },
-];
+]
 
 // ---------------------------------------------------------------------------
 // §« Principe général » et §« Suivi et ajustement », réduits aux règles qu'on
@@ -395,22 +353,23 @@ export const SHOPPING_LIST: ShoppingGroup[] = [
 
 export const SIMPLE_RULES: string[] = [
   'Une protéine à chaque repas, sans exception.',
-  'Glucides concentrés avant et après l’entraînement.',
+  'Le repas de 11 h 45 se prépare la veille : c’est ton carburant pour la séance.',
   'Légumes à volonté, ça ne compte quasiment pas.',
   'Moyenne 7 jours, jamais une pesée isolée.',
-  'Jour de repos : mêmes six prises, on allège seulement les féculents.',
-];
+  'Aucun aliment interdit : une quiche ou un repas libre de temps en temps fait partie du plan.',
+]
 
 /** §« Le seul complément qui vaut le coup ». */
 export const SUPPLEMENTS_NOTE =
-  'Créatine monohydrate, 5 g par jour, tous les jours, n’importe quand — le seul complément qui vaut le coup. La whey est un dépannage pratique, pas une obligation. Pas de brûleur de graisse, pas de BCAA.';
+  'La whey est un dépannage pratique après la séance. Créatine 5 g/jour : facultative. Pas de brûleur de graisse.';
 
 /** §« Hydratation ». */
 export const HYDRATION_NOTE =
-  'Bois régulièrement, la couleur des urines suffit comme repère. Plus d’eau et de sel les jours de chaleur ou de grosse transpiration sur chantier. Pas de règle rigide du type « 3 L obligatoires ».';
+  'Rien à boire entre 8 h 15 et 11 h 45 ni entre 13 h 15 et 15 h 45 : bois 0,5 L avant 8 h 15, 0,5 L dès 11 h 45, 0,5 L avant 13 h 15, 0,5 L dès 15 h 45, le reste le soir. Par forte chaleur : +0,5 à 1 L et une pincée de sel à 11 h 45. Maux de tête ou vertiges sur l’échafaudage → tu le signales.';
 
 /** §« Suivi et ajustement » — la vitesse de prise visée. */
-export const TARGET_GAIN_KG_PER_WEEK = { min: 0.15, max: 0.3 } as const;
+export const TARGET_GAIN_KG_PER_WEEK = { min: -1, max: -0.5 } as const;
+// ↑ Programme Remuald : perte de 0,5 à 1 kg par semaine (≈ 0,5 à 1 % du poids).
 
 // ---------------------------------------------------------------------------
 // Bonus glucidique par séance — décision de Guillaume, hors .md
@@ -514,9 +473,9 @@ export const FUEL_ADVICE: Record<FuelLevel, FuelAdvice> = {
  * Mardi et jeudi sont absents : sans séance, le niveau est « repos ».
  */
 export const FUEL_BY_TRAINING_DAY: Partial<Record<0 | 1 | 2 | 3 | 4 | 5 | 6, FuelLevel>> = {
-  0: 'high',
-  2: 'standard',
-  4: 'medium',
-  5: 'high',
-  6: 'medium',
-};
+  // Programme Remuald : objectif perte de graisse, pas de bonus glucidique.
+  0: 'standard',
+  1: 'standard',
+  3: 'standard',
+  6: 'standard',
+}

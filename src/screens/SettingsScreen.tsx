@@ -23,12 +23,6 @@ import {
 import type { SettingsRow } from '../db/db';
 import styles from './Screens.module.css';
 
-const ONE_RM_FIELDS = [
-  { id: 'back-squat', label: 'Back Squat', start: 140 },
-  { id: 'bench-press', label: 'Bench Press', start: 120 },
-  { id: 'deadlift', label: 'Deadlift', start: 130 },
-  { id: 'weighted-pullup', label: 'Tractions lestées', start: 42 },
-] as const;
 
 export function SettingsScreen({ onChanged }: { onChanged: () => void }) {
   const [row, setRow] = useState<SettingsRow | null>(null);
@@ -153,11 +147,9 @@ export function SettingsScreen({ onChanged }: { onChanged: () => void }) {
           )}
           {ancreValide && (
             <p className={styles.fieldHint}>
-              Combine : squat le {humanDate(dateFor(start, 0, 0))}, tractions lestées le{' '}
-              {humanDate(dateFor(start, 0, 1))}, deadlift le {humanDate(dateFor(start, 0, 3))}, bench
-              le {humanDate(dateFor(start, 0, 4))}, tractions max le {humanDate(dateFor(start, 0, 5))}.
-              Semaine 1 le {humanDate(dateFor(start, 1, 0))}, dernière séance le{' '}
-              {humanDate(dateFor(start, 12, 6))}.
+              Bilan initial : {humanDate(dateFor(start, 0, 0))}, {humanDate(dateFor(start, 0, 1))}{' '}
+              et {humanDate(dateFor(start, 0, 3))}. Semaine 1 le {humanDate(dateFor(start, 1, 0))},
+              dernière séance le {humanDate(dateFor(start, 12, 6))}.
             </p>
           )}
         </div>
@@ -204,71 +196,6 @@ export function SettingsScreen({ onChanged }: { onChanged: () => void }) {
             </button>
           )}
         </div>
-      </section>
-
-      {/* --------------------------------------------- référence de saut -- */}
-      <section className={styles.card}>
-        <h2 className={styles.cardTitle}>Référence broad jump</h2>
-        <p className={styles.cardSub}>
-          Meilleur des 3 essais du combine initial. Elle est figée : c’est elle qui décide du feu
-          tricolore avant chaque séance jambes.
-        </p>
-        <div className={styles.field}>
-          <Stepper
-            label="Référence"
-            value={row.broadJumpBaselineCm}
-            step={5}
-            min={100}
-            max={400}
-            unit="cm"
-            tone="accent"
-            onStep={(d) =>
-              void patch({
-                broadJumpBaselineCm: stepValue(row.broadJumpBaselineCm, d, 100, 400),
-              })
-            }
-            onCommit={(v) => void patch({ broadJumpBaselineCm: v })}
-          />
-          <p className={styles.fieldHint}>
-            {row.broadJumpBaselineCm === null
-              ? 'Non définie : aucun verdict de readiness ne sera calculé.'
-              : `Orange en dessous de ${fr(Math.round(row.broadJumpBaselineCm * 0.98 * 10) / 10)} cm, rouge en dessous de ${fr(Math.round(row.broadJumpBaselineCm * 0.95 * 10) / 10)} cm.`}
-          </p>
-        </div>
-      </section>
-
-      {/* ------------------------------------------------------- 1RM ----- */}
-      <section className={styles.card}>
-        <h2 className={styles.cardTitle}>1RM testés</h2>
-        <p className={styles.cardSub}>
-          Ils servent aux jours de <b>readiness rouge</b> (65 % du 1RM) et te donnent un repère de
-          progression. Ils ne touchent <b>pas</b> aux charges du tableau §9 : celles-ci sont écrites
-          en kilos dans le programme, et seules les règles de progression §11 les font bouger, à
-          partir de ce que tu as réellement soulevé.
-        </p>
-        {ONE_RM_FIELDS.map((f) => (
-          <div key={f.id} className={styles.field}>
-            <Stepper
-              label={f.label}
-              value={row.oneRM[f.id] ?? f.start}
-              step={2.5}
-              min={0}
-              max={300}
-              unit="kg"
-              onStep={(d) =>
-                void patch({
-                  oneRM: {
-                    ...row.oneRM,
-                    [f.id]: stepValue(row.oneRM[f.id] ?? f.start, d, 0, 300),
-                  },
-                })
-              }
-              onCommit={(v) =>
-                void patch({ oneRM: { ...row.oneRM, [f.id]: v ?? f.start } })
-              }
-            />
-          </div>
-        ))}
       </section>
 
       {/* ---------------------------------------------------- alertes ---- */}

@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { bestJump, manualRed, readiness } from './readiness';
+import {
+  READINESS_QUESTIONS,
+  bestJump,
+  manualRed,
+  readiness,
+  readinessFromAnswers,
+} from './readiness';
 
 const REF = 240; // cm
 
@@ -30,7 +36,7 @@ describe('§4 — feu tricolore', () => {
   it('dit ce que la séance va devenir', () => {
     expect(readiness(REF, 250)!.effect).toContain('Rien ne change');
     expect(readiness(REF, 230)!.effect).toContain('−5 %');
-    expect(readiness(REF, 200)!.effect).toContain('65 %');
+    expect(readiness(REF, 200)!.effect).toContain('60 %');
   });
 
   it('ne verdicte pas sans référence ni sans saisie valide', () => {
@@ -66,5 +72,28 @@ describe('§4 — rouge sans test', () => {
     expect(manualRed({ sleepUnder5h: true, generalSoreness: true, warmupFeltHeavy: true })).toBe(true);
     expect(manualRed({ sleepUnder5h: true, generalSoreness: true, warmupFeltHeavy: false })).toBe(false);
     expect(manualRed({ sleepUnder5h: false, generalSoreness: true, warmupFeltHeavy: true })).toBe(false);
+  });
+});
+
+
+describe('programme Remuald — forme du jour en 3 questions, sans saut', () => {
+  it('pose trois questions', () => {
+    expect(READINESS_QUESTIONS).toHaveLength(3);
+  });
+
+  it('ne rend aucun verdict tant qu’une question est sans réponse', () => {
+    expect(readinessFromAnswers([false, null, false])).toBeNull();
+    expect(readinessFromAnswers([])).toBeNull();
+  });
+
+  it('0 oui → vert, 1 oui → orange, 2 ou 3 oui → rouge', () => {
+    expect(readinessFromAnswers([false, false, false])?.level).toBe('vert');
+    expect(readinessFromAnswers([true, false, false])?.level).toBe('orange');
+    expect(readinessFromAnswers([false, true, true])?.level).toBe('rouge');
+    expect(readinessFromAnswers([true, true, true])?.level).toBe('rouge');
+  });
+
+  it('compte les « oui » dans jumpCm, réutilisé pour l’affichage', () => {
+    expect(readinessFromAnswers([true, false, true])?.jumpCm).toBe(2);
   });
 });

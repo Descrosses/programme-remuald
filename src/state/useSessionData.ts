@@ -7,20 +7,26 @@ import { useCallback, useEffect, useState } from 'react';
 import type { DayIndex, WeekIndex } from '../data/types';
 import { dateFor } from '../engine/calendar';
 import { getSession as buildSession, type ResolvedSession } from '../engine/getSession';
-import { readiness as computeReadiness } from '../engine/readiness';
-import { explosiveTrend, type ExplosiveTrend } from '../engine/trends';
+import { readinessFromAnswers } from '../engine/readiness';
+import type { ExplosiveTrend } from '../engine/trends';
 import type { HistoryIndex, ReadinessResult } from '../engine/types';
 import type { ReadinessRow, SessionRow, SetRow } from '../db/db';
 import {
-  allReadiness,
   buildHistoryIndex,
   allSets,
   ensureSession,
   getReadiness,
   getSettingsRow,
   toEngineSettings,
-  toReadinessRecords,
 } from '../db/repo';
+
+const NO_TREND: ExplosiveTrend = {
+  declining: false,
+  consecutiveDrops: 0,
+  suggestEarlyDeload: false,
+  weekly: [],
+  message: '',
+};
 
 export interface SessionData {
   loading: boolean;
@@ -51,17 +57,14 @@ export function useSessionData(week: WeekIndex, day: DayIndex): SessionData {
     const settings = toEngineSettings(settingsRow);
     const date = settings.startDate ? dateFor(settings.startDate, week, day) : '';
 
-    const [sets, readinessRows, readinessRow] = await Promise.all([
-      allSets(),
-      allReadiness(),
-      getReadiness(week, day),
-    ]);
+    const [sets, readinessRow] = await Promise.all([allSets(), getReadiness(week, day)]);
 
     const history = buildHistoryIndex(sets);
-    const trend = explosiveTrend(toReadinessRecords(readinessRows), date || undefined);
+    // Pas de sauts dans ce programme : le cas 7 (sauts en baisse) ne s'applique pas.
+    const trend = NO_TREND;
 
     const readinessResult = readinessRow
-      ? computeReadiness(settings.broadJumpBaselineCm, readinessRow.jumpCm)
+      ? readinessFromAnswers(readinessRow.attempts.map((a) => (a === null ? null : a === 1)))
       : null;
 
     const session = buildSession(week, day, {

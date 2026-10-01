@@ -244,7 +244,7 @@ export class ProgrammeDB extends Dexie {
   settings!: Table<SettingsRow, number>;
 
   constructor() {
-    super('programme-12-semaines');
+    super('programme-remuald');
     this.version(1).stores({
       sessions: '++id, &[week+day], date, status',
       sets: '++id, sessionId, [sessionId+exerciseId], exerciseId, [exerciseId+week], date',

@@ -47,7 +47,7 @@ describe('la semaine consultée se retient', () => {
     // Stockage partagé, mise à jour ratée, bidouille : on retombe sur le
     // défaut plutôt que d'ouvrir une semaine qui n'existe pas.
     for (const brut of ['', 'deux', '13', '-1', '2,5', 'NaN']) {
-      stubStorage({ 'p12s:last-week': brut });
+      stubStorage({ 'premuald:last-week': brut });
       expect(readLastWeek(), JSON.stringify(brut)).toBe(SEMAINE_PAR_DEFAUT);
     }
   });
@@ -106,7 +106,7 @@ describe('quelle semaine ouvre l’onglet Semaine', () => {
     // Le stockage survit à la fermeture de l'appli : on simule le redémarrage
     // en repartant d'une session vierge avec le même contenu stocké.
     writeLastWeek(11 as WeekIndex);
-    stubStorage({ 'p12s:last-week': '11' });
+    stubStorage({ 'premuald:last-week': '11' });
     expect(weekForTab({ name: 'today' })).toBe(11);
   });
 

@@ -94,7 +94,7 @@ describe('le pas des boutons +/−', () => {
 describe('un champ de charge sur CHAQUE exercice du programme', () => {
   it('les 12 semaines et les combines exposent tous un champ', () => {
     const seances = toutesLesSeances();
-    expect(seances.length).toBeGreaterThan(60); // 12 × 5 + la semaine de combine
+    expect(seances).toHaveLength(51); // 12 × 4 + les 3 jours du bilan initial
     let exercices = 0;
 
     for (const { week, day, session } of seances) {
@@ -106,11 +106,11 @@ describe('un champ de charge sur CHAQUE exercice du programme', () => {
         exercices += 1;
       }
     }
-    expect(exercices).toBeGreaterThan(300);
+    expect(exercices).toBeGreaterThan(250);
   });
 
   it('les mouvements au poids du corps proposent bien « PDC » par défaut', () => {
-    const auPDC = ['box-jump', 'pogo-jumps', 'nordic-curl', 'ab-wheel', 'plyo-push-up'];
+    const auPDC = ['dead-bug', 'knee-raise', 'plank', 'zone2-cardio'];
     const vus = new Set<string>();
     for (const { session } of toutesLesSeances()) {
       for (const ex of session?.exercises ?? []) {
@@ -121,16 +121,15 @@ describe('un champ de charge sur CHAQUE exercice du programme', () => {
         expect(entry.emptyLabel, ex.id).toBe('PDC');
       }
     }
-    expect([...vus].sort()).toEqual(['ab-wheel', 'box-jump', 'nordic-curl', 'plyo-push-up', 'pogo-jumps']);
+    expect([...vus].sort()).toEqual(['dead-bug', 'knee-raise', 'plank', 'zone2-cardio']);
   });
 
-  it('la charge planifiée du .md reste celle du plan, la saisie ne la touche pas', () => {
-    const samedi = getSession(1, 5, CTX)!;
-    const deadlift = samedi.exercises.find((e) => e.id === 'deadlift')!;
-    expect(deadlift.load.kg).toBe(105);
-    expect(deadlift.loadLine).toContain('105 kg');
-    // Le champ part de la valeur planifiée : c'est elle qu'on confirme ou corrige.
-    expect(loadEntryFor(deadlift).initialKg).toBe(105);
+  it('programme Remuald : aucune charge imposée la première fois, le champ est vide', () => {
+    // Débutant, pas de 1RM : la charge se choisit au RPE à la première séance.
+    const jeudi = getSession(1, 3, CTX)!;
+    const rdl = jeudi.exercises.find((e) => e.id === 'rdl')!;
+    expect(rdl.load.kg).toBeNull();
+    expect(loadEntryFor(rdl).initialKg).toBeNull();
   });
 });
 
@@ -158,18 +157,18 @@ describe('une charge saisie en S1 est reproposée en S2', () => {
   });
 
   it('une poulie notée à 37,5 kg revient à 37,5 kg la semaine suivante', () => {
-    const exId = 'explosive-cable-row';
-    const avant = getSession(1, 4, CTX)!.exercises.find((e) => e.id === exId)!;
+    const exId = 'one-arm-cable-row';
+    const avant = getSession(1, 6, CTX)!.exercises.find((e) => e.id === exId)!;
     expect(loadEntryFor(avant).initialKg, 'aucune charge la première fois').toBeNull();
 
-    const ctx: SessionContext = { ...CTX, history: historique(exId, 1, 37.5) };
-    const apres = getSession(2, 4, ctx)!.exercises.find((e) => e.id === exId)!;
+    const ctx: SessionContext = { ...CTX, history: historique(exId, 1, 37.5, 6) };
+    const apres = getSession(2, 6, ctx)!.exercises.find((e) => e.id === exId)!;
     expect(apres.lastKg).toBe(37.5);
     expect(loadEntryFor(apres).initialKg).toBe(37.5);
   });
 
   it('un lest noté sur un mouvement au poids du corps revient aussi', () => {
-    const exId = 'ab-wheel';
+    const exId = 'dead-bug';
     const ctx: SessionContext = { ...CTX, history: historique(exId, 1, 10) };
     const apres = getSession(2, 0, ctx)!.exercises.find((e) => e.id === exId)!;
     // Le plan reste au poids du corps : c'est le CHAMP qui se souvient, pas la

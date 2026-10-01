@@ -80,11 +80,13 @@ describe('moyenne glissante', () => {
     expect(t.countThisWeek).toBe(7);
   });
 
-  it('signale une progression dans la fourchette visée, +0,15 à +0,30 kg', () => {
-    const e = serie([79.2, 79.2, 79.2, 79.2, 79.2, 79.2, 79.2, 79, 79, 79, 79, 79, 79, 79]);
+  it('programme Remuald : signale une perte dans la fourchette visée, −0,5 à −1 kg', () => {
+    const e = serie([109.3, 109.3, 109.3, 109.3, 109.3, 109.3, 109.3, 110, 110, 110, 110, 110, 110, 110]);
     expect(weightTrend(e, AUJOURDHUI).onTarget).toBe(true);
-    const trop = serie([80, 80, 80, 80, 80, 80, 80, 79, 79, 79, 79, 79, 79, 79]);
-    expect(weightTrend(trop, AUJOURDHUI).onTarget).toBe(false);
+    const tropVite = serie([108.5, 108.5, 108.5, 108.5, 108.5, 108.5, 108.5, 110, 110, 110, 110, 110, 110, 110]);
+    expect(weightTrend(tropVite, AUJOURDHUI).onTarget).toBe(false);
+    const stable = serie([109.9, 109.9, 109.9, 109.9, 109.9, 109.9, 109.9, 110, 110, 110, 110, 110, 110, 110]);
+    expect(weightTrend(stable, AUJOURDHUI).onTarget).toBe(false);
   });
 
   it('découpe l’historique en fenêtres hebdomadaires', () => {
@@ -104,48 +106,35 @@ describe('suggestion d’ajustement', () => {
     expect(nutritionAdvice(e, AUJOURDHUI).kind).toBe('none');
   });
 
-  it('poids stable 3 semaines → ajoute 50 g de féculent', () => {
-    const e = hebdo([79.0, 79.05, 78.95, 79.0]);
-    const a = nutritionAdvice(e, AUJOURDHUI);
-    expect(a.kind).toBe('add');
-    expect(a.weeks).toBe(3);
-    expect(a.action).toContain('Ajoute 50 g');
-  });
-
-  it('deux semaines stables ne suffisent pas : la 3e tranche', () => {
-    // Semaine −3 en nette hausse : la série stable ne fait que 2 semaines.
-    const e = hebdo([79.0, 79.05, 78.95, 78.0]);
-    expect(nutritionAdvice(e, AUJOURDHUI).kind).toBe('none');
-  });
-
-  it('une variation à 200 g n’est pas « stable » : on retient le bord prudent', () => {
-    const e = hebdo([79.2, 79.0, 78.8, 78.6]);
-    expect(nutritionAdvice(e, AUJOURDHUI).kind).toBe('none');
-  });
-
-  it('prise de plus de 400 g/semaine sur 2 semaines → retire 50 g', () => {
-    const e = hebdo([80.0, 79.4, 78.8, 78.2]);
+  it('programme Remuald (perte de poids) : poids stable 3 semaines → retire 50 g', () => {
+    const e = hebdo([109.0, 109.05, 108.95, 109.0]);
     const a = nutritionAdvice(e, AUJOURDHUI);
     expect(a.kind).toBe('remove');
-    expect(a.weeks).toBe(2);
+    expect(a.weeks).toBe(3);
     expect(a.action).toBe('Retire 50 g de féculent au dîner.');
   });
 
-  it('si le tour de taille monte aussi, le message le dit', () => {
-    const e = hebdo([80.0, 79.4, 78.8, 78.2], { 0: 88, 2: 86 });
+  it('deux semaines stables ne suffisent pas : la 3e tranche', () => {
+    const e = hebdo([109.0, 109.05, 108.95, 110.0]);
+    expect(nutritionAdvice(e, AUJOURDHUI).kind).toBe('none');
+  });
+
+  it('une perte régulière de 0,7 kg par semaine ne déclenche rien : c’est le rythme visé', () => {
+    const e = hebdo([107.9, 108.6, 109.3, 110.0]);
+    expect(nutritionAdvice(e, AUJOURDHUI).kind).toBe('none');
+  });
+
+  it('perte de plus de 1,1 kg/semaine sur 2 semaines → ajoute 50 g', () => {
+    const e = hebdo([106.4, 107.6, 108.8, 110.0]);
     const a = nutritionAdvice(e, AUJOURDHUI);
-    expect(a.kind).toBe('remove');
-    expect(a.action).toContain('pas uniquement musculaire');
+    expect(a.kind).toBe('add');
+    expect(a.weeks).toBe(2);
+    expect(a.action).toContain('Ajoute 50 g');
   });
 
-  it('tour de taille stable pendant une prise rapide → message simple', () => {
-    const e = hebdo([80.0, 79.4, 78.8, 78.2], { 0: 86, 2: 86 });
-    expect(nutritionAdvice(e, AUJOURDHUI).action).not.toContain('musculaire');
-  });
-
-  it('une prise rapide n’est jamais lue comme un plateau', () => {
-    const e = hebdo([80.0, 79.4, 78.8, 78.2]);
-    expect(nutritionAdvice(e, AUJOURDHUI).kind).not.toBe('add');
+  it('une seule semaine de perte rapide ne suffit pas', () => {
+    const e = hebdo([106.8, 108.0, 108.5, 109.0]);
+    expect(nutritionAdvice(e, AUJOURDHUI).kind).toBe('none');
   });
 
   it('un trou dans l’historique fait taire la suggestion au lieu de deviner', () => {
@@ -157,8 +146,8 @@ describe('suggestion d’ajustement', () => {
   it('les seuils codés sont bien les bords prudents du .md', () => {
     expect(ADJUST_RULES.stableKg).toBe(0.15); // et non 0,2
     expect(ADJUST_RULES.stableWeeks).toBe(3); // et non 2
-    expect(ADJUST_RULES.fastGainKg).toBe(0.4); // et non 0,5
-    expect(ADJUST_RULES.fastGainWeeks).toBe(2); // on corrige tôt
+    expect(ADJUST_RULES.fastLossKg).toBe(1.1); // 1 % du poids de départ
+    expect(ADJUST_RULES.fastLossWeeks).toBe(2); // on corrige tôt
   });
 });
 
@@ -182,33 +171,12 @@ describe('tour de taille', () => {
  * Bonus glucidique : le niveau suit la séance réellement programmée, jamais un
  * nom de jour tenu à part. Ces tests figent les sept jours de la semaine type.
  */
-describe('carburant du jour', () => {
-  it('la semaine type, jour par jour', () => {
-    const attendu: Array<[DayIndex | null, string, string]> = [
-      [0, 'high', 'lundi — Lower Strength, squat lourd'],
-      [null, 'rest', 'mardi — pas de séance'],
-      [2, 'standard', 'mercredi — Upper Strength'],
-      [null, 'rest', 'jeudi — pas de séance'],
-      [4, 'medium', 'vendredi — Total Body Power'],
-      [5, 'high', 'samedi — Posterior Chain, deadlift'],
-      [6, 'medium', 'dimanche — Upper Athletic'],
-    ];
-    for (const [day, niveau, libelle] of attendu) {
-      expect(fuelForToday(day).level, libelle).toBe(niveau);
+describe('carburant du jour — programme Remuald', () => {
+  it('objectif perte de graisse : aucun bonus glucidique, quel que soit le jour', () => {
+    for (const day of [0, 1, 3, 6] as DayIndex[]) {
+      expect(fuelForToday(day).level, `jour ${day}`).toBe('standard');
+      expect(fuelForToday(day).kcal, `jour ${day}`).toBe(0);
     }
-  });
-
-  it('le mercredi est « standard » malgré la charge la plus lourde de la semaine', () => {
-    // Choix assumé : la force du haut du corps puise peu dans le glycogène.
-    expect(fuelForToday(2).level).toBe('standard');
-    expect(fuelForToday(2).foods).toEqual([]);
-    expect(fuelForToday(2).kcal).toBe(0);
-  });
-
-  it('les deux jours lourds proposent le même bonus', () => {
-    expect(fuelForToday(0)).toEqual(fuelForToday(5));
-    expect(fuelForToday(0).foods).toEqual(['+ 1 banane', '+ 40 g pain', '+ 20 g miel']);
-    expect(fuelForToday(0).kcal).toBe(240);
   });
 
   it('un jour sans séance ne propose jamais de bonus', () => {
@@ -216,34 +184,12 @@ describe('carburant du jour', () => {
     expect(fuelForToday(null).kcal).toBe(0);
   });
 
-  it('une séance posée un mardi ou un jeudi — semaine de combine — reste sans bonus', () => {
-    // Ces jours n'existent pas dans la table de Guillaume. Annoncer « repos »
-    // un jour de test serait faux : on affiche le plan de base, sans bonus.
-    expect(fuelForToday(1).level).toBe('standard');
-    expect(fuelForToday(3).level).toBe('standard');
-  });
-
-  /*
-   * Le sous-titre est le même texte les 84 jours du programme : il ne peut donc
-   * pas nommer un contenu de séance. « Force du haut du corps » était vrai le
-   * mercredi et faux les mardis et jeudis de la combine (tests de 1RM), où le
-   * niveau retombe sur `standard`.
-   */
   it('aucun sous-titre ne nomme un contenu de séance', () => {
     const interdits = ['haut du corps', 'bas du corps', 'squat', 'traction', 'soulevé'];
     for (const niveau of Object.values(FUEL_ADVICE)) {
       for (const mot of interdits) {
         expect(niveau.subtitle.toLowerCase().includes(mot), `${niveau.level} — ${mot}`).toBe(false);
       }
-    }
-    expect(FUEL_ADVICE.standard.subtitle).toBe('Séance modérée');
-  });
-
-  it('seuls les glucides bougent : aucun niveau ne touche protéines ni lipides', () => {
-    for (const day of [0, 1, 2, 3, 4, 5, 6] as DayIndex[]) {
-      const f = fuelForToday(day);
-      expect(f.carbsLabel.includes('protéines'), `jour ${day}`).toBe(false);
-      expect(f.carbsLabel.includes('lipides'), `jour ${day}`).toBe(false);
     }
   });
 });
@@ -261,14 +207,14 @@ describe('féculent nécessaire pour combler l’écart', () => {
 });
 
 describe('aliments modifiables', () => {
-  const COLLATION = NUTRITION_TARGETS.train.meals.find((m) => m.name === 'Collation — 10 h')!;
+  const COLLATION = NUTRITION_TARGETS.train.meals.find((m) => m.name === 'Avant 8 h 15')!;
   const skyr = COLLATION.items!.find((i) => i.product === 'skyr')!;
   const pomme = COLLATION.items!.find((i) => i.product === 'pomme')!;
 
   it('un aliment pesé compte au prorata de sa quantité', () => {
-    // 280 g de skyr à 63 kcal/100 g.
-    expect(itemMacros(skyr).kcal).toBeCloseTo(176.4, 1);
-    expect(itemMacros(skyr).proteinG).toBeCloseTo(27.44, 2);
+    // 250 g de skyr à 63 kcal/100 g.
+    expect(itemMacros(skyr).kcal).toBeCloseTo(157.5, 1);
+    expect(itemMacros(skyr).proteinG).toBeCloseTo(24.5, 2);
   });
 
   it('un aliment compté à l’unité ne divise pas par 100', () => {
@@ -289,10 +235,9 @@ describe('aliments modifiables', () => {
     const apresRepas = mealMacros(COLLATION, ov).kcal;
     const apresJour = mealsTotal(NUTRITION_TARGETS.train, ov).kcal;
 
-    // 280 g × (86 − 63) / 100 = 64,4 kcal exactement. Le repas est arrondi une
-    // fois, à la fin : 430 → 495, soit 65. Arrondir chaque aliment d'abord
-    // aurait donné un autre chiffre — d'où l'arrondi unique, au repas.
-    expect(apresRepas - avantRepas).toBe(65);
+    // 250 g × (86 − 63) / 100 = 57,5 kcal. Le repas est arrondi une seule
+    // fois, à la fin : 389,5 → 390 avant, 447 après, soit 57.
+    expect(apresRepas - avantRepas).toBe(57);
     expect(apresJour - avantJour).toBe(apresRepas - avantRepas);
   });
 
@@ -306,7 +251,7 @@ describe('aliments modifiables', () => {
     expect(effectiveItem(skyr, {})).toBe(skyr);
     expect(effectiveItem(skyr, { amandes: { kcal: 1 } })).toBe(skyr);
     expect(isEdited(skyr, {})).toBe(false);
-    expect(isEdited(skyr, { [skyr.id]: { qty: 280 } })).toBe(false); // même valeur = pas modifié
+    expect(isEdited(skyr, { [skyr.id]: { qty: 250 } })).toBe(false); // même valeur = pas modifié
     expect(isEdited(skyr, { [skyr.id]: { qty: 300 } })).toBe(true);
   });
 
@@ -324,20 +269,20 @@ describe('aliments modifiables', () => {
   });
 
   it('une correction de composition vaut pour toutes les lignes du même produit', () => {
-    // Le pain apparaît au réveil ET à la collation de 16 h, sur les deux
-    // paliers : une seule saisie doit suffire.
+    // Le pain apparaît au lever (deux paliers) et au repas de midi : une seule
+    // saisie doit suffire.
     const lignesPain = Object.values(NUTRITION_TARGETS)
       .flatMap((t) => t.meals)
       .flatMap((m) => m.items ?? [])
       .filter((i) => i.product === 'pain');
-    expect(lignesPain.length).toBeGreaterThanOrEqual(4);
+    expect(lignesPain.length).toBeGreaterThanOrEqual(3);
     for (const l of lignesPain) {
       expect(effectiveItem(l, { pain: { kcal: 300 } }).kcal, l.id).toBe(300);
     }
   });
 
   it('une correction de quantité ne touche QUE la ligne ouverte', () => {
-    const reveil = NUTRITION_TARGETS.train.meals.find((m) => m.name === 'Réveil — 6 h')!;
+    const reveil = NUTRITION_TARGETS.train.meals.find((m) => m.name === 'Au lever — ≈ 6 h 45')!;
     const painReveil = reveil.items!.find((i) => i.product === 'pain')!;
     const autres = Object.values(NUTRITION_TARGETS)
       .flatMap((t) => t.meals)
@@ -369,7 +314,7 @@ describe('sens de l’écart entre les repas et la cible', () => {
    */
   const TRAIN = NUTRITION_TARGETS.train;
   const painDuReveil = TRAIN.meals
-    .find((m) => m.name === 'Réveil — 6 h')!
+    .find((m) => m.name === 'Au lever — ≈ 6 h 45')!
     .items!.find((i) => i.product === 'pain')!;
 
   it('le plan tel qu’écrit tombe dans la tolérance', () => {
@@ -398,7 +343,7 @@ describe('sens de l’écart entre les repas et la cible', () => {
     expect(gapVerdict(bord)).toBe('ok');
     const large = { ...TRAIN, kcal: Math.round(mealsTotal(TRAIN).kcal / 1.2) };
     expect(gapVerdict(large)).toBe('surplus');
-    expect(cible).toBe(3600); // garde-fou : le test parle bien de la vraie cible
+    expect(cible).toBe(2800); // garde-fou : le test parle bien de la vraie cible
   });
 });
 
@@ -421,7 +366,7 @@ describe('cohérence d’une étiquette recopiée', () => {
    */
   it('repère des kcal que les macros ne peuvent pas produire', () => {
     const legumes = NUTRITION_TARGETS.train.meals
-      .find((m) => m.name === 'Dîner')!
+      .find((m) => m.name.startsWith('Dîner'))!
       .items!.find((i) => i.product === 'legumes')!;
     expect(macrosLookWrong(legumes)).toBe(false);
     expect(macrosLookWrong(legumes, { legumes: { kcal: 416 } })).toBe(true);
@@ -429,7 +374,7 @@ describe('cohérence d’une étiquette recopiée', () => {
 
   it('accepte une étiquette réellement dense quand ses macros suivent', () => {
     const legumes = NUTRITION_TARGETS.train.meals
-      .find((m) => m.name === 'Dîner')!
+      .find((m) => m.name.startsWith('Dîner'))!
       .items!.find((i) => i.product === 'legumes')!;
     // Un mélange sec de légumineuses et de graines : dense, mais cohérent.
     const ov: FoodOverrides = {

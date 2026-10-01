@@ -2,7 +2,7 @@
  * Types du programme.
  *
  * Règle absolue : ce dossier ne contient QUE des données transcrites depuis
- * `programme-final-12-semaines.md`. Aucune logique, aucun calcul, aucun React.
+ * `programme-remuald.md`. Aucune logique, aucun calcul, aucun React.
  * Tout ce qui décide se trouve dans `src/engine/`.
  */
 
@@ -65,8 +65,8 @@ export const DAY_LABELS_SHORT: Record<DayIndex, string> = {
 /** Jour de la semaine ISO (1 = lundi … 7 = dimanche) pour chaque DayIndex. */
 export const DAY_ISO: Record<DayIndex, number> = { 0: 1, 1: 2, 2: 3, 3: 4, 4: 5, 5: 6, 6: 7 };
 
-/** §3 — les cinq jours d'entraînement d'une semaine type. */
-export const TRAINING_DAYS = [0, 2, 4, 5, 6] as const satisfies readonly DayIndex[];
+/** Programme Remuald — les quatre jours d'entraînement : lundi, mardi, jeudi, dimanche. */
+export const TRAINING_DAYS = [0, 1, 3, 6] as const satisfies readonly DayIndex[];
 
 /**
  * Correspondance des anciens index (5 jours) vers les nouveaux (7 jours).

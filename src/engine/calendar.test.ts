@@ -16,40 +16,24 @@ import {
 /** Lundi 5 janvier 2026 — lundi du combine initial, l'ancre du calendrier. */
 const START = '2026-01-05';
 
-describe('calendrier — le calage décidé avec Guillaume', () => {
-  it('le combine initial occupe lundi, mardi, jeudi, vendredi et samedi', () => {
-    expect(dateFor(START, 0, 0)).toBe('2026-01-05'); // lundi   — squat
-    expect(dateFor(START, 0, 1)).toBe('2026-01-06'); // mardi   — tractions lestées
-    expect(dateFor(START, 0, 3)).toBe('2026-01-08'); // jeudi   — deadlift
-    expect(dateFor(START, 0, 4)).toBe('2026-01-09'); // vendredi — bench
-    expect(dateFor(START, 0, 5)).toBe('2026-01-10'); // samedi  — tractions max
+describe('calendrier — programme Remuald', () => {
+  it('le bilan initial occupe lundi, mardi et jeudi', () => {
+    expect(dateFor(START, 0, 0)).toBe('2026-01-05'); // lundi
+    expect(dateFor(START, 0, 1)).toBe('2026-01-06'); // mardi
+    expect(dateFor(START, 0, 3)).toBe('2026-01-08'); // jeudi
   });
 
-  it('le mercredi et le dimanche de la semaine 0 restent vides', () => {
+  it('la semaine 0 ne compte que ces trois jours', () => {
     const s0 = schedule(START).filter((s) => s.week === 0);
-    expect(s0.map((s) => s.day)).toEqual([0, 1, 3, 4, 5]);
-    expect(s0).toHaveLength(5);
+    expect(s0.map((s) => s.day)).toEqual([0, 1, 3]);
   });
 
-  it('la semaine 1 démarre le lundi suivant, semaine pleine', () => {
+  it('la semaine 1 démarre le lundi suivant : lundi, mardi, jeudi, dimanche', () => {
     expect(dateFor(START, 1, 0)).toBe('2026-01-12'); // lundi
-    expect(dateFor(START, 1, 2)).toBe('2026-01-14'); // mercredi
-    expect(dateFor(START, 1, 4)).toBe('2026-01-16'); // vendredi
-    expect(dateFor(START, 1, 5)).toBe('2026-01-17'); // samedi
+    expect(dateFor(START, 1, 1)).toBe('2026-01-13'); // mardi
+    expect(dateFor(START, 1, 3)).toBe('2026-01-15'); // jeudi
     expect(dateFor(START, 1, 6)).toBe('2026-01-18'); // dimanche
-    expect(schedule(START).filter((s) => s.week === 1)).toHaveLength(5);
-  });
-
-  it('un jour de repos complet sépare le combine de la semaine 1', () => {
-    const dernierTest = dateFor(START, 0, 5); // samedi
-    const premiereSeance = dateFor(START, 1, 0); // lundi
-    expect(daysBetween(dernierTest, premiereSeance)).toBe(2);
-  });
-
-  it('le deadlift a un jour vide la veille', () => {
-    const dates = new Set(schedule(START).map((s) => s.date));
-    const deadlift = dateFor(START, 0, 3);
-    expect(dates.has(addDays(deadlift, -1))).toBe(false); // mercredi
+    expect(schedule(START).filter((s) => s.week === 1).map((s) => s.day)).toEqual([0, 1, 3, 6]);
   });
 
   it('la semaine 2 reprend le rythme régulier', () => {
@@ -66,9 +50,9 @@ describe('calendrier — le calage décidé avec Guillaume', () => {
     }
   });
 
-  it('le programme compte 65 séances : 5 du combine + 12 × 5', () => {
+  it('le programme compte 51 séances : 3 du bilan initial + 12 × 4', () => {
     const all = schedule(START);
-    expect(all).toHaveLength(5 + 12 * 5);
+    expect(all).toHaveLength(3 + 12 * 4);
     expect(all[0]!.date).toBe('2026-01-05');
     expect(all[all.length - 1]!.week).toBe(12);
     expect(all[all.length - 1]!.day).toBe(6);
@@ -81,7 +65,7 @@ describe('calendrier — le calage décidé avec Guillaume', () => {
     }
   });
 
-  it('à partir de la semaine 1, mardi et jeudi sont toujours des repos', () => {
+  it('à partir de la semaine 1, mercredi, vendredi et samedi sont toujours des repos', () => {
     const dates = new Set(
       schedule(START)
         .filter((s) => s.week >= 1)
@@ -90,7 +74,7 @@ describe('calendrier — le calage décidé avec Guillaume', () => {
     for (let d = 7; d < 90; d++) {
       const iso = addDays(START, d);
       const jour = new Date(`${iso}T12:00:00Z`).getUTCDay();
-      if (jour === 2 || jour === 4) expect(dates.has(iso), iso).toBe(false);
+      if (jour === 3 || jour === 5 || jour === 6) expect(dates.has(iso), iso).toBe(false);
     }
   });
 });
@@ -105,17 +89,17 @@ describe('écran Aujourd’hui', () => {
     }
   });
 
-  it('un mardi de semaine d’entraînement annonce le mercredi', () => {
-    const t = locateToday(START, '2026-01-13')!; // mardi S1
+  it('un mercredi de semaine d’entraînement annonce le jeudi', () => {
+    const t = locateToday(START, '2026-01-14')!; // mercredi S1
     expect(t.kind).toBe('rest');
     if (t.kind === 'rest') {
-      expect(t.next.date).toBe('2026-01-14');
+      expect(t.next.date).toBe('2026-01-15');
       expect(t.next.week).toBe(1);
       expect(t.daysUntil).toBe(1);
     }
   });
 
-  it('le mercredi de repos du combine annonce le deadlift du jeudi', () => {
+  it('le mercredi de repos du bilan annonce le jeudi', () => {
     const t = locateToday(START, '2026-01-07')!;
     expect(t.kind).toBe('rest');
     if (t.kind === 'rest') {
@@ -152,10 +136,10 @@ describe('écran Aujourd’hui', () => {
 
 describe('navigation manuelle', () => {
   it('recule et avance d’une séance', () => {
-    // Avant le lundi de la S1 : le samedi du combine, en semaine 0.
+    // Avant le lundi de la S1 : le jeudi du bilan, en semaine 0.
     expect(previousSession(START, 1, 0)!.week).toBe(0);
-    expect(previousSession(START, 1, 0)!.day).toBe(5);
-    expect(nextSession(START, 1, 0)!.day).toBe(2); // mercredi
+    expect(previousSession(START, 1, 0)!.day).toBe(3);
+    expect(nextSession(START, 1, 0)!.day).toBe(1); // mardi
     expect(previousSession(START, 0, 0)).toBeNull(); // première séance
     expect(nextSession(START, 12, 6)).toBeNull(); // dernière
   });
@@ -181,7 +165,7 @@ describe('utilitaires de date', () => {
 describe('l’ancre de date ne bouge jamais avec le jour de consultation', () => {
   it('les dates du combine sont identiques quel que soit « aujourd’hui »', () => {
     const ancre = '2026-09-14'; // lundi
-    const attendu = ['2026-09-14', '2026-09-15', '2026-09-17', '2026-09-18', '2026-09-19'];
+    const attendu = ['2026-09-14', '2026-09-15', '2026-09-17'];
 
     for (const aujourdhui of ['2026-09-14', '2026-09-19', '2026-11-30']) {
       const vu = schedule(ancre)
@@ -198,9 +182,8 @@ describe('l’ancre de date ne bouge jamais avec le jour de consultation', () =>
 
   it('chaque jour du combine reste calé sur l’ancre, pas sur la date d’ouverture', () => {
     const ancre = '2026-09-14';
-    expect(dateFor(ancre, 0, 1)).toBe('2026-09-15'); // tractions lestées
-    expect(dateFor(ancre, 0, 3)).toBe('2026-09-17'); // deadlift
-    expect(dateFor(ancre, 0, 5)).toBe('2026-09-19'); // tractions max
+    expect(dateFor(ancre, 0, 1)).toBe('2026-09-15'); // mardi du bilan
+    expect(dateFor(ancre, 0, 3)).toBe('2026-09-17'); // jeudi du bilan
     expect(dateFor(ancre, 1, 0)).toBe('2026-09-21'); // début semaine 1
     expect(dateFor(ancre, 12, 6)).toBe('2026-12-13'); // dernière séance
   });

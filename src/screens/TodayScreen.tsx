@@ -13,14 +13,12 @@ import { fr } from '../engine/format';
 import { getSession } from '../engine/getSession';
 import { explosiveTrend, type ExplosiveTrend } from '../engine/trends';
 import {
-  allReadiness,
   allSessions,
   allSets,
   buildHistoryIndex,
   getSettingsRow,
   saveSettings,
   toEngineSettings,
-  toReadinessRecords,
 } from '../db/repo';
 import type { SessionRow } from '../db/db';
 import styles from './Screens.module.css';
@@ -90,13 +88,10 @@ export function TodayScreen({
       const todayIso = new Date().toISOString().slice(0, 10);
       const today = locateToday(settings.startDate, todayIso);
 
-      const [sets, readinessRows, rows] = await Promise.all([
-        allSets(),
-        allReadiness(),
-        allSessions(),
-      ]);
+      const [sets, rows] = await Promise.all([allSets(), allSessions()]);
       const history = buildHistoryIndex(sets);
-      const trend = explosiveTrend(toReadinessRecords(readinessRows), todayIso);
+      // Pas de sauts dans ce programme : le cas 7 ne s'applique jamais.
+      const trend = explosiveTrend([], todayIso);
 
       // Aperçu de la séance : seul l'en-tête nous intéresse ici.
       let title = '';
@@ -178,8 +173,8 @@ export function TodayScreen({
               }
             />
             <p className={styles.fieldHint}>
-              Six jours de tests : squat lundi, tractions lestées mardi, deadlift jeudi, bench
-              vendredi, tractions max samedi. Dimanche repos, puis la semaine 1 démarre le lundi.
+              Bilan initial lundi, mardi et jeudi, sans aucune charge maximale. Dimanche repos,
+              puis la semaine 1 démarre le lundi.
             </p>
           </div>
         </section>
@@ -286,7 +281,7 @@ export function TodayScreen({
         </button>
       )}
 
-      {/* §12 — la moyenne de 3 matins se prépare avant, pas à Basic-Fit. */}
+      {/* La moyenne de 3 matins se prépare avant, pas à la salle. */}
       {state.combineAhead && (
         <button
           type="button"

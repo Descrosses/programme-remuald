@@ -1,37 +1,38 @@
 import { useState } from 'react';
-import { bestJump, readiness as compute } from '../engine/readiness';
+import { READINESS_QUESTIONS, readinessFromAnswers } from '../engine/readiness';
 import type { ReadinessResult } from '../engine/types';
-import { Stepper, stepValue } from './Stepper';
 import styles from '../screens/Session.module.css';
 
 /**
- * §4 — readiness test. Trois broad jumps, on garde le meilleur.
+ * Readiness SANS SAUT — programme Remuald.
  *
- * Défauts n°1 et n°4 du prototype corrigés : la saisie est persistée en base,
- * et le verdict modifie réellement la séance affichée en dessous.
+ * Consigne de départ : aucun saut au début. Le test de forme du jour est donc
+ * un questionnaire de 3 questions, posé après l'échauffement des séances
+ * jambes. Le verdict modifie réellement la séance affichée en dessous :
+ * 0 oui → vert, 1 oui → orange, 2-3 oui → rouge.
+ *
+ * Les réponses sont stockées dans le champ `attempts` de la ligne de readiness
+ * (1 = oui, 0 = non), pour ne rien changer au schéma de la base.
  */
 export function ReadinessSection({
-  baselineCm,
-  attempts,
+  answers,
   result,
   onSave,
 }: {
-  baselineCm: number | null;
-  attempts: Array<number | null>;
+  answers: Array<boolean | null>;
   result: ReadinessResult | null;
-  onSave: (attempts: Array<number | null>) => void;
+  onSave: (answers: Array<boolean | null>) => void;
 }) {
-  const [draft, setDraft] = useState<Array<number | null>>(attempts);
-  const best = bestJump(draft);
-  const preview = compute(baselineCm, best);
+  const [draft, setDraft] = useState<Array<boolean | null>>(answers);
+  const preview = readinessFromAnswers(draft);
   const shown = result ?? preview;
   const level = shown?.level;
+  const complete = preview !== null;
 
-  // Mise à jour fonctionnelle : deux appuis rapides sur « + » comptent pour deux.
-  const stepAttempt = (i: number, delta: number) => {
+  const answer = (i: number, value: boolean) => {
     setDraft((prev) => {
       const next = [...prev];
-      next[i] = stepValue(prev[i] ?? null, delta, 100, 400);
+      next[i] = value;
       return next;
     });
   };
@@ -47,28 +48,36 @@ export function ReadinessSection({
               ? styles.readyRouge
               : ''
       }`}
-      aria-label="Readiness test"
+      aria-label="Test de forme du jour"
     >
-      <h2 className={styles.readyTitle}>Readiness — 3 broad jumps</h2>
+      <h2 className={styles.readyTitle}>Forme du jour — 3 questions</h2>
       <p className={styles.readyHint}>
-        {baselineCm
-          ? `Référence ${baselineCm} cm. Après l’échauffement, 3 sauts, 1 min de repos entre chaque.`
-          : 'Renseigne ta référence de broad jump dans les réglages : sans elle, pas de verdict.'}
+        Après l’échauffement. Réponds franchement : la séance s’adapte, elle ne se saute pas.
       </p>
 
       <div className={styles.jumps}>
-        {[0, 1, 2].map((i) => (
-          <Stepper
-            key={i}
-            label={`Saut ${i + 1}`}
-            value={draft[i] ?? null}
-            step={5}
-            min={100}
-            max={400}
-            unit="cm"
-            tone={best !== null && draft[i] === best ? 'accent' : 'normal'}
-            onStep={(d) => stepAttempt(i, d)}
-          />
+        {READINESS_QUESTIONS.map((q, i) => (
+          <div key={q} className={styles.question}>
+            <span className={styles.questionText}>{q}</span>
+            <div className={styles.yesNo} role="group" aria-label={q}>
+              <button
+                type="button"
+                className={`${styles.yesNoButton} ${draft[i] === true ? styles.yesNoOn : ''}`}
+                onClick={() => answer(i, true)}
+                aria-pressed={draft[i] === true}
+              >
+                Oui
+              </button>
+              <button
+                type="button"
+                className={`${styles.yesNoButton} ${draft[i] === false ? styles.yesNoOn : ''}`}
+                onClick={() => answer(i, false)}
+                aria-pressed={draft[i] === false}
+              >
+                Non
+              </button>
+            </div>
+          </div>
         ))}
       </div>
 
@@ -76,9 +85,9 @@ export function ReadinessSection({
         type="button"
         className={styles.readyValidate}
         onClick={() => onSave(draft)}
-        disabled={best === null || baselineCm === null}
+        disabled={!complete}
       >
-        {result ? 'Mettre à jour le verdict' : 'Valider le readiness'}
+        {result ? 'Mettre à jour le verdict' : 'Valider'}
       </button>
 
       {shown && (
@@ -95,8 +104,7 @@ export function ReadinessSection({
             {shown.level.toUpperCase()}
           </span>{' '}
           <span className="tnum">
-            ({shown.pctDelta > 0 ? '+' : ''}
-            {String(shown.pctDelta).replace('.', ',')} %)
+            ({shown.jumpCm} oui sur {READINESS_QUESTIONS.length})
           </span>
           <div style={{ marginTop: 6 }}>{shown.effect}</div>
           {!result && <div style={{ marginTop: 6, color: 'var(--ink-3)' }}>Pas encore validé.</div>}

@@ -147,8 +147,8 @@ export function getSession(
     }
   }
 
-  // 3. Deload.
-  const isDeload = block === 'deload' && !special;
+  // 3. Deload — et allègement de la semaine 12 (lundi, mardi), traité pareil.
+  const isDeload = (block === 'deload' || block === 'taper') && !special;
   if (isDeload) {
     slots = slots.filter((s) => !DELOAD_POLICY.removeExIds.includes(s.exId as never));
     notes.push(...DELOAD_POLICY.notes);
@@ -183,7 +183,7 @@ export function getSession(
     sessionAdjustments.push({
       source: 'rouge',
       what: 'Readiness ROUGE',
-      why: 'Lift principal à 3 × 3 à 65 % du 1RM, tronc et mobilité, et tu rentres (§4).',
+      why: 'Exercices principaux en technique légère, tronc, 20 min de zone 2, et tu rentres.',
     });
     notes.push('Readiness rouge : aucune série au-dessus de RPE 8 aujourd’hui.');
   }
@@ -321,7 +321,10 @@ function resolveSlot(slot: Slot, o: ResolveOpts): ResolvedExercise | null {
 
   // 3. Deload — uniquement sur ce que le tableau ne chiffre pas déjà.
   if (o.isDeload && !slot.liftId) {
-    if (def.role === 'accessory' && load.kg !== null) {
+    // Programme Remuald : pas de tableau de charges, le deload touche donc aussi
+    // les exercices principaux, sur la base de la dernière charge réelle.
+    const allege = def.role === 'accessory' || def.role === 'main';
+    if (allege && load.kg !== null) {
       const before = load.kg;
       load = scaleLoad(load, DELOAD_POLICY.accessoryLoadFactor);
       sets = DELOAD_POLICY.accessorySets;
@@ -330,7 +333,7 @@ function resolveSlot(slot: Slot, o: ResolveOpts): ResolvedExercise | null {
         what: `${before} → ${load.kg} kg, ${sets} séries`,
         why: 'Deload : 80 % de ta dernière charge réelle, 2 séries (§8).',
       });
-    } else if (def.role === 'accessory') {
+    } else if (allege) {
       sets = DELOAD_POLICY.accessorySets;
     } else if (def.role === 'power') {
       const before = sets;
@@ -456,10 +459,12 @@ function applyRed(exercises: ResolvedExercise[], ctx: SessionContext): ResolvedE
   for (const ex of exercises) {
     const rmKey = ONE_RM_FOR[ex.id];
 
-    if (ex.def.role === 'main' && rmKey) {
-      const oneRM = ctx.settings.oneRM[rmKey];
+    if (ex.def.role === 'main') {
+      // Pas de 1RM dans ce programme : 60 % de la dernière charge réelle.
+      const ref = (rmKey ? ctx.settings.oneRM[rmKey] : undefined) ?? ex.lastKg ?? undefined;
+      const oneRM = ref;
       const kg =
-        oneRM === undefined
+        oneRM === undefined || oneRM === null
           ? null
           : roundToStep(oneRM * READINESS_THRESHOLDS.red.pctOf1RM, ex.load.step);
       out.push({
@@ -471,25 +476,27 @@ function applyRed(exercises: ResolvedExercise[], ctx: SessionContext): ResolvedE
         suggestion: null,
         notes: [
           ...ex.notes,
-          oneRM === undefined
-            ? 'Renseigne ton 1RM dans les réglages pour que l’appli calcule les 65 %.'
-            : `65 % de ton 1RM testé (${oneRM} kg). Technique et vitesse, rien d’autre.`,
+          oneRM === undefined || oneRM === null
+            ? 'Charge légère : environ la moitié de ta charge habituelle. Technique, rien d’autre.'
+            : `60 % de ta dernière charge (${oneRM} kg). Technique, rien d’autre.`,
         ],
         adjustments: [
           ...ex.adjustments,
           {
             source: 'rouge',
             what: `3 × 3 × ${kg ?? '—'} kg`,
-            why: 'Readiness rouge : technique à 65 % du 1RM (§4).',
+            why: 'Forme rouge : technique légère à 60 % de ta dernière charge.',
           },
         ],
       });
       continue;
     }
 
-    // On garde le tronc et la mobilité, on retire tout le reste.
+    // On garde le tronc, la mobilité et 20 min de zone 2, on retire tout le reste.
     if (ex.def.role === 'core' || ex.def.fn === 'mobility') {
       out.push(ex);
+    } else if (ex.id === 'zone2-cardio') {
+      out.push({ ...ex, work: { kind: 'time', seconds: 20 * 60 }, notes: [...ex.notes, 'Forme rouge : 20 min, facile.'] });
     }
   }
 

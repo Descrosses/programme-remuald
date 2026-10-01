@@ -2,27 +2,21 @@ import { useEffect, useMemo, useState } from 'react';
 import { BarChart, LineChart, type Series } from '../components/Chart';
 import { VisualTracking } from '../components/VisualTracking';
 import { EXERCISES } from '../data/exercises';
-import { prescriptionFor } from '../data/mainLiftTable';
-import { DAY_LABELS_SHORT, type MainLiftId } from '../data/types';
+import { DAY_LABELS_SHORT } from '../data/types';
 import { fr } from '../engine/format';
-import { explosiveTrend, weeklyBests } from '../engine/trends';
 import type { HistoryIndex } from '../engine/types';
-import {
-  allReadiness,
-  allSets,
-  buildHistoryIndex,
-  getSettingsRow,
-  toReadinessRecords,
-} from '../db/repo';
-import type { ReadinessRow, SetRow } from '../db/db';
+import { allSets, buildHistoryIndex } from '../db/repo';
+import type { SetRow } from '../db/db';
 import styles from './Screens.module.css';
 
-/** Les quatre lifts que le programme suit vraiment (§13). */
-const LIFTS: Array<{ id: MainLiftId; label: string }> = [
+/** Les exercices principaux du programme Remuald. */
+const LIFTS: Array<{ id: string; label: string }> = [
+  { id: 'goblet-squat', label: 'Goblet' },
   { id: 'back-squat', label: 'Squat' },
-  { id: 'bench-press', label: 'Bench' },
-  { id: 'deadlift', label: 'Deadlift' },
-  { id: 'weighted-pullup', label: 'Tractions' },
+  { id: 'bench-press', label: 'Couché' },
+  { id: 'lat-pulldown', label: 'Tirage' },
+  { id: 'rdl', label: 'RDL' },
+  { id: 'hip-thrust', label: 'Hip Thrust' },
 ];
 
 /**
@@ -35,74 +29,29 @@ type Vue = 'chiffres' | 'photos';
 
 export function ProgressScreen() {
   const [vue, setVue] = useState<Vue>('chiffres');
-  const [data, setData] = useState<{
-    history: HistoryIndex;
-    readiness: ReadinessRow[];
-    sets: SetRow[];
-    baseline: number | null;
-    oneRM: Record<string, number>;
-  } | null>(null);
-  const [lift, setLift] = useState<MainLiftId>('deadlift');
+  const [data, setData] = useState<{ history: HistoryIndex; sets: SetRow[] } | null>(null);
+  const [lift, setLift] = useState<string>('bench-press');
 
   useEffect(() => {
     void (async () => {
-      const [sets, readiness, settingsRow] = await Promise.all([
-        allSets(),
-        allReadiness(),
-        getSettingsRow(),
-      ]);
-      setData({
-        history: buildHistoryIndex(sets),
-        readiness,
-        sets,
-        baseline: settingsRow.broadJumpBaselineCm,
-        oneRM: settingsRow.oneRM,
-      });
+      const sets = await allSets();
+      setData({ history: buildHistoryIndex(sets), sets });
     })();
   }, []);
 
-  const trend = useMemo(
-    () => (data ? explosiveTrend(toReadinessRecords(data.readiness)) : null),
-    [data],
+  const realPoints = useMemo(
+    () =>
+      (data?.history[lift] ?? [])
+        .filter((o) => o.kg !== null)
+        .map((o) => ({ x: o.week, y: o.kg! })),
+    [data, lift],
   );
 
   if (!data) return <div className={styles.loading}>Chargement…</div>;
 
-  // --- charge réelle vs plan, semaine par semaine ---------------------------
-  const planPoints = [];
-  for (let w = 1; w <= 12; w++) {
-    // Même base que les séances : la courbe « Plan » doit montrer le plan
-    // recalé, pas celui d'avant le combine.
-    const p = prescriptionFor(lift, w);
-    const kg = p?.load && 'kg' in p.load ? p.load.kg : null;
-    if (kg !== null) planPoints.push({ x: w, y: kg });
-  }
-  const exId = LIFTS.find((l) => l.id === lift)!.id;
-  const realPoints = (data.history[exId] ?? [])
-    .filter((o) => o.kg !== null)
-    .map((o) => ({ x: o.week, y: o.kg! }));
-
-  const liftSeries: Series[] = [
-    { label: 'Plan', color: 'var(--ink-3)', points: planPoints, dashed: true },
-    { label: 'Réel', color: 'var(--accent)', points: realPoints },
-  ];
-
-  // --- broad jump dans le temps --------------------------------------------
-  const jumps = weeklyBests(toReadinessRecords(data.readiness));
-  const jumpSeries: Series[] = [
-    { label: 'Meilleur saut', color: 'var(--vert)', points: jumps.map((j) => ({ x: j.week, y: j.cm })) },
-  ];
-  if (data.baseline !== null && jumps.length > 0) {
-    jumpSeries.unshift({
-      label: 'Référence',
-      color: 'var(--ink-3)',
-      dashed: true,
-      points: [
-        { x: jumps[0]!.week, y: data.baseline },
-        { x: jumps[jumps.length - 1]!.week, y: data.baseline },
-      ],
-    });
-  }
+  // --- charge réelle, semaine par semaine -----------------------------------
+  // Pas de courbe « plan » : les charges de Remuald se règlent au RPE.
+  const liftSeries: Series[] = [{ label: 'Réel', color: 'var(--accent)', points: realPoints }];
 
   // --- RPE moyen par séance -------------------------------------------------
   const bySession = new Map<string, { sum: number; n: number; week: number; day: number }>();
@@ -133,7 +82,7 @@ export function ProgressScreen() {
         <h1 className={styles.h1}>Progression</h1>
         <p className={styles.lead}>
           {vue === 'chiffres'
-            ? 'Ce que tu as réellement soulevé, comparé au plan.'
+            ? 'Ce que tu as réellement soulevé, semaine après semaine.'
             : 'Une photo par semaine. Ce que les courbes ne montrent pas.'}
         </p>
       </header>
@@ -161,12 +110,6 @@ export function ProgressScreen() {
 
       {vue === 'chiffres' && (
         <>
-      {trend?.declining && (
-        <p className={`${styles.alert} ${trend.suggestEarlyDeload ? styles.alertRouge : ''}`}>
-          {trend.message}
-        </p>
-      )}
-
       <div className={styles.weeks}>
         {LIFTS.map((l) => (
           <button
@@ -196,19 +139,6 @@ export function ProgressScreen() {
           xLabels={weeksX}
           unit="kg"
           emptyMessage="Valide des séries pour voir la courbe apparaître."
-        />
-      </section>
-
-      <section className={styles.card}>
-        <h2 className={styles.cardTitle}>Broad jump — readiness</h2>
-        <p className={styles.cardSub}>
-          Meilleur saut de chaque semaine. Deux baisses de suite déclenchent le cas 7 du programme.
-        </p>
-        <LineChart
-          series={jumpSeries}
-          xLabels={weeksX}
-          unit="cm"
-          emptyMessage="Aucun readiness test enregistré."
         />
       </section>
 

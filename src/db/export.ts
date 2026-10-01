@@ -21,7 +21,7 @@ import {
 export const EXPORT_VERSION = 1;
 
 export interface ExportFile {
-  format: 'programme-12-semaines';
+  format: 'programme-remuald';
   version: number;
   exportedAt: string;
   settings: SettingsRow | null;
@@ -57,7 +57,7 @@ export interface ExportFile {
  * reconnaît tout seul lequel des deux on lui donne.
  */
 export interface PhotoExportFile {
-  format: 'programme-12-semaines-photos';
+  format: 'programme-remuald-photos';
   version: number;
   exportedAt: string;
   progressPhotos: Array<{ week: number; date: string; dataUrl: string; width: number; height: number }>;
@@ -93,7 +93,7 @@ export async function exportAll(): Promise<ExportFile> {
     ]);
 
   return {
-    format: 'programme-12-semaines',
+    format: 'programme-remuald',
     version: EXPORT_VERSION,
     exportedAt: new Date().toISOString(),
     settings: settings ?? null,
@@ -115,7 +115,7 @@ export async function exportPhotos(): Promise<PhotoExportFile> {
     db.exerciseReference.toArray(),
   ]);
   return {
-    format: 'programme-12-semaines-photos',
+    format: 'programme-remuald-photos',
     version: EXPORT_VERSION,
     exportedAt: new Date().toISOString(),
     progressPhotos: await Promise.all(
@@ -152,7 +152,7 @@ export async function exportPhotos(): Promise<PhotoExportFile> {
 
 /** Nom de fichier daté, pour ne pas écraser un export précédent. */
 export function exportFileName(now = new Date()): string {
-  return `programme-12-semaines-${now.toISOString().slice(0, 10)}.json`;
+  return `programme-remuald-${now.toISOString().slice(0, 10)}.json`;
 }
 
 function download(content: string, filename: string): void {
@@ -183,7 +183,7 @@ export async function downloadExport(): Promise<void> {
 export async function downloadPhotoExport(): Promise<{ bytes: number; count: number }> {
   const file = await exportPhotos();
   const json = JSON.stringify(file);
-  download(json, `programme-12-semaines-photos-${new Date().toISOString().slice(0, 10)}.json`);
+  download(json, `programme-remuald-photos-${new Date().toISOString().slice(0, 10)}.json`);
   return {
     bytes: new Blob([json]).size,
     count: file.progressPhotos.length + file.exerciseMedia.length,
@@ -224,12 +224,12 @@ export function parseAnyExport(text: string): AnyExportFile {
   } catch {
     throw new Error('Ce fichier n’est pas du JSON valide.');
   }
-  if ((parsed as { format?: string })?.format === 'programme-12-semaines-photos') {
+  if ((parsed as { format?: string })?.format === 'programme-remuald-photos') {
     const f = parsed as PhotoExportFile;
     return {
       kind: 'photos',
       file: {
-        format: 'programme-12-semaines-photos',
+        format: 'programme-remuald-photos',
         version: f.version ?? EXPORT_VERSION,
         exportedAt: f.exportedAt ?? '',
         progressPhotos: f.progressPhotos ?? [],
@@ -310,7 +310,7 @@ export function parseExport(text: string): ExportFile {
     throw new Error('Ce fichier n’est pas du JSON valide.');
   }
   const f = parsed as Partial<ExportFile>;
-  if (f?.format !== 'programme-12-semaines') {
+  if (f?.format !== 'programme-remuald') {
     throw new Error('Ce fichier ne vient pas de cette application.');
   }
   if (typeof f.version !== 'number' || f.version > EXPORT_VERSION) {
@@ -319,7 +319,7 @@ export function parseExport(text: string): ExportFile {
     );
   }
   return {
-    format: 'programme-12-semaines',
+    format: 'programme-remuald',
     version: f.version,
     exportedAt: f.exportedAt ?? '',
     settings: f.settings ?? null,

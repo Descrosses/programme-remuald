@@ -14,8 +14,8 @@ import type { CombinePhase, CombineRow } from '../db/db';
 import styles from './Screens.module.css';
 
 const PHASES: Array<{ id: CombinePhase; label: string; when: string }> = [
-  { id: 'initial', label: 'Initial', when: 'Avant la semaine 1' },
-  { id: 's8', label: 'Intermédiaire', when: 'Semaine 8, sans 1RM' },
+  { id: 'initial', label: 'Initial', when: 'Semaine 0' },
+  { id: 's8', label: 'Intermédiaire', when: 'Semaine 8' },
   { id: 'final', label: 'Final', when: 'Semaine 12' },
 ];
 
@@ -28,9 +28,9 @@ const PHASES: Array<{ id: CombinePhase; label: string; when: string }> = [
  * relais — chaque mesure de cet écran l'accepte.
  */
 const MEASURE = {
-  cm: { step: 5, min: 50, max: 400, unit: 'cm' },
-  s: { step: 0.1, min: 0.5, max: 60, unit: 's' },
-  m: { step: 5, min: 5, max: 200, unit: 'm' },
+  cm: { step: 1, min: 50, max: 250, unit: 'cm' },
+  s: { step: 5, min: 0, max: 600, unit: 's' },
+  m: { step: 10, min: 5, max: 20000, unit: 'm' },
   kg: { step: 2.5, min: 0, max: 300, unit: 'kg' },
   reps: { step: 1, min: 0, max: 60, unit: 'reps' },
 } as const;
@@ -43,15 +43,10 @@ const MEASURE = {
  * « back-squat ». Les paliers du squat et du bench ne s'affichaient donc
  * jamais — sans erreur, juste rien.
  */
-const RAMP_KEY: Record<string, keyof typeof RAMPS | undefined> = {
-  'test-squat-1rm': 'back-squat',
-  'test-bench-1rm': 'bench-press',
-  'test-deadlift-1rm': 'deadlift',
-  'test-weighted-pullup-1rm': 'weighted-pullup',
-};
+const RAMP_KEY: Record<string, string | undefined> = {};
 
-/** Un temps de sprint plus bas est meilleur : la flèche doit s'inverser. */
-const LOWER_IS_BETTER = new Set(['test-sprint-10m', 'test-sprint-20m']);
+/** Poids et tour de taille : plus bas = mieux, la flèche s'inverse. */
+const LOWER_IS_BETTER = new Set(['test-bodyweight', 'test-waist']);
 
 export function CombineScreen() {
   const [rows, setRows] = useState<CombineRow[] | null>(null);
@@ -82,16 +77,17 @@ export function CombineScreen() {
     setRows(await allCombines());
   }
 
-  // §13 — « Le vrai critère : l'écart deadlift − squat. »
-  const gap = (p: CombinePhase) => {
-    const m = byPhase(p);
-    const dl = m['test-deadlift-1rm'];
-    const sq = m['test-squat-1rm'];
-    return typeof dl === 'number' && typeof sq === 'number' ? dl - sq : null;
+  // L'indicateur clé de Remuald : le poids perdu depuis le bilan initial.
+  const poids = (p: CombinePhase) => {
+    const v = byPhase(p)['test-bodyweight'];
+    return typeof v === 'number' ? v : null;
   };
-  const gapInitial = gap('initial');
-  const gapFinal = gap('final');
-  const gapNow = gapFinal ?? gapInitial;
+  const poidsInitial = poids('initial');
+  const poidsDernier = poids('final') ?? poids('s8');
+  const gapNow =
+    poidsInitial !== null && poidsDernier !== null
+      ? Math.round((poidsDernier - poidsInitial) * 10) / 10
+      : null;
 
   return (
     <div className={styles.screen}>
@@ -123,19 +119,25 @@ export function CombineScreen() {
 
       {/* --- L'indicateur clé du programme -------------------------------- */}
       <section className={styles.card}>
-        <h2 className={styles.cardTitle}>Écart deadlift − squat</h2>
+        <h2 className={styles.cardTitle}>Poids depuis le bilan initial</h2>
         <p className={styles.cardSub}>
-          Le vrai critère du programme. S’il devient nul ou positif, la chaîne postérieure a rattrapé
-          son retard.
+          L’indicateur clé, à lire avec le tour de taille et des charges qui montent. Rythme visé :
+          −0,5 à −1 kg par semaine.
         </p>
         <div className={styles.keyStat}>
           <div
             className={styles.keyStatValue}
-            style={{ color: gapNow === null ? 'var(--ink-3)' : gapNow >= 0 ? 'var(--vert)' : 'var(--orange)' }}
+            style={{ color: gapNow === null ? 'var(--ink-3)' : gapNow < 0 ? 'var(--vert)' : 'var(--orange)' }}
           >
             {gapNow === null ? '—' : `${gapNow > 0 ? '+' : ''}${fr(gapNow)} kg`}
           </div>
-          <div className={styles.keyStatLabel}>{gapLabel(byPhase, gapInitial, gapFinal)}</div>
+          <div className={styles.keyStatLabel}>
+            {poidsInitial === null
+              ? 'Saisis le poids du bilan initial pour le calculer.'
+              : poidsDernier === null
+                ? `Bilan initial : ${fr(poidsInitial)} kg. Saisis le bilan suivant pour voir l’écart.`
+                : `Bilan initial ${fr(poidsInitial)} kg, dernier bilan ${fr(poidsDernier)} kg.`}
+          </div>
         </div>
       </section>
 
@@ -192,7 +194,7 @@ export function CombineScreen() {
         Saisie — combine {PHASES.find((p) => p.id === phase)!.label.toLowerCase()}
       </h2>
       {phase === 's8' && (
-        <p className={styles.hint}>Pas de 1RM cette semaine : tests athlétiques seulement.</p>
+        <p className={styles.hint}>Mêmes tests qu’au bilan initial, même ordre, même matériel.</p>
       )}
 
       {metrics.map((id) => {
@@ -270,36 +272,4 @@ export function CombineScreen() {
       </button>
     </div>
   );
-}
-
-/**
- * Légende de l'écart deadlift − squat.
- *
- * Elle affichait une phrase écrite en dur — « Départ : deadlift 130, squat
- * 140, soit −10 kg » — qui étaient les estimations d'avant le combine. Le
- * chiffre au-dessus, lui, venait des vrais tests. Deux sources pour un même
- * indicateur, et la légende contredisait le nombre qu'elle expliquait.
- *
- * Tout vient désormais des combines enregistrés, et rien d'autre.
- */
-function gapLabel(
-  byPhase: (p: CombinePhase) => Record<string, number | null>,
-  gapInitial: number | null,
-  gapFinal: number | null,
-): string {
-  if (gapInitial === null && gapFinal === null) {
-    return 'Saisis un deadlift et un squat 1RM pour le calculer.';
-  }
-  if (gapInitial !== null && gapFinal !== null) {
-    return `Au départ ${fr(gapInitial)} kg, aujourd’hui ${fr(gapFinal)} kg.`;
-  }
-  const m = byPhase('initial');
-  const dl = m['test-deadlift-1rm'];
-  const sq = m['test-squat-1rm'];
-  if (typeof dl === 'number' && typeof sq === 'number') {
-    return `Combine initial : deadlift ${fr(dl)}, squat ${fr(sq)}, soit ${
-      gapInitial! > 0 ? '+' : ''
-    }${fr(gapInitial!)} kg.`;
-  }
-  return 'Mesuré au combine final. Saisis le combine initial pour voir la progression.';
 }

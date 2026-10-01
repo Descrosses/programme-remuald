@@ -27,8 +27,44 @@ const EFFECTS: Record<ReadinessLevel, string> = {
   orange:
     '−5 % sur les gros mouvements et une série de moins sur les accessoires. C’est déjà appliqué ci-dessous.',
   rouge:
-    'Lift principal remplacé par 3 × 3 à 65 % de ton 1RM, tronc et mobilité conservés, tout le reste retiré. Tu rentres.',
+    'Exercices principaux en technique légère (3 × 3 à 60 % de ta dernière charge), tronc et 20 min de zone 2 conservés, tout le reste retiré. Tu rentres.',
 };
+
+/**
+ * Programme Remuald — readiness SANS SAUT (consigne de départ : aucun saut
+ * au début). Trois questions, posées après l'échauffement des séances jambes :
+ */
+export const READINESS_QUESTIONS = [
+  'Moins de 6 h de sommeil cette nuit ?',
+  'Journée de travail très physique, ou courbatures dans tout le corps ?',
+  'Échauffement anormalement lourd ?',
+] as const;
+
+/**
+ *   0 oui    → VERT
+ *   1 oui    → ORANGE
+ *   2-3 oui  → ROUGE
+ *
+ * Les champs `jumpCm` / `baselineCm` / `pctDelta` du résultat sont réutilisés :
+ * `jumpCm` porte le nombre de « oui », les deux autres valent 0.
+ *
+ * @param answers une réponse par question ; `null` = pas encore répondu
+ * @returns `null` tant que les trois questions n'ont pas de réponse
+ */
+export function readinessFromAnswers(answers: Array<boolean | null>): ReadinessResult | null {
+  if (answers.length < READINESS_QUESTIONS.length) return null;
+  if (answers.some((a) => a === null || a === undefined)) return null;
+  const yes = answers.filter((a) => a === true).length;
+  const level: ReadinessLevel = yes === 0 ? 'vert' : yes === 1 ? 'orange' : 'rouge';
+  return {
+    level,
+    pctDelta: 0,
+    jumpCm: yes,
+    baselineCm: 0,
+    label: LABELS[level],
+    effect: EFFECTS[level],
+  };
+}
 
 /**
  * @param baselineCm référence figée (meilleur broad jump du combine initial)

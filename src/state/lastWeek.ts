@@ -22,7 +22,7 @@
 import type { WeekIndex } from '../data/types';
 import type { Route } from './useRoute';
 
-const KEY = 'p12s:last-week';
+const KEY = 'premuald:last-week';
 
 /** Semaine 0 = combine initial, 12 = taper et tests. */
 export const PREMIERE_SEMAINE = 0;

@@ -1,471 +1,191 @@
 /**
- * `getSession` — le générateur de séances.
- *
- * On vérifie que chaque bloc du programme produit bien la séance décrite dans
- * le .md, et que le feu tricolore modifie réellement la séance (défaut n°4 du
- * prototype).
+ * `getSession` appliqué au programme Remuald : blocs, deload, allègement,
+ * forme du jour (orange / rouge) et progression.
  */
 
 import { describe, expect, it } from 'vitest';
-import { getSession, hasSession, type ResolvedExercise } from './getSession';
-import { readiness } from './readiness';
-import { EMPTY_CONTEXT, type Occurrence, type SessionContext } from './types';
-import type { DayIndex, WeekIndex } from '../data/types';
+import { getSession, type ResolvedExercise, type ResolvedSession } from './getSession';
+import { readinessFromAnswers } from './readiness';
+import { EMPTY_CONTEXT, type HistoryIndex, type Occurrence, type SessionContext } from './types';
+import { rpe, type DayIndex, type RPETarget, type WeekIndex } from '../data/types';
 
-/** Les 1RM réellement mesurés au combine initial. */
-const ONE_RM = {
-  'back-squat': 110,
-  'bench-press': 115,
-  deadlift: 140,
-  'weighted-pullup': 45,
-} as const;
+const CTX: SessionContext = {
+  ...EMPTY_CONTEXT,
+  settings: { ...EMPTY_CONTEXT.settings, startDate: '2026-10-05' },
+};
 
-function ctx(over: Partial<SessionContext> = {}): SessionContext {
+function occ(
+  exerciseId: string,
+  week: number,
+  day: DayIndex,
+  kg: number,
+  actualRpe: number | null = 7,
+  target: RPETarget | null = rpe(7),
+): Occurrence {
   return {
-    ...EMPTY_CONTEXT,
-    settings: { startDate: '2026-01-03', broadJumpBaselineCm: 240, oneRM: { ...ONE_RM } },
-    ...over,
+    exerciseId,
+    week,
+    day,
+    kg,
+    plannedKg: null,
+    rpe: actualRpe,
+    failed: false,
+    targetRPE: target,
+    completed: true,
   };
 }
 
-function session(week: number, day: number, c: SessionContext = ctx()) {
-  const s = getSession(week as WeekIndex, day as DayIndex, c);
-  if (!s) throw new Error(`Pas de séance en S${week} jour ${day}`);
-  return s;
+/** Un historique où chaque exercice chargé du jour a été fait à `kg`. */
+function histoire(entries: Array<[string, number, DayIndex, number]>): HistoryIndex {
+  const h: HistoryIndex = {};
+  for (const [id, week, day, kg] of entries) (h[id] ??= []).push(occ(id, week, day, kg));
+  return h;
 }
 
-const ids = (ex: ResolvedExercise[]) => ex.map((e) => e.id);
-const find = (s: { exercises: ResolvedExercise[] }, id: string) => {
-  const ex = s.exercises.find((e) => e.id === id);
-  if (!ex) throw new Error(`${id} absent de la séance : ${ids(s.exercises).join(', ')}`);
-  return ex;
-};
+const seance = (week: number, day: DayIndex, ctx: SessionContext = CTX): ResolvedSession =>
+  getSession(week as WeekIndex, day, ctx)!;
+const ex = (s: ResolvedSession, id: string): ResolvedExercise | undefined =>
+  s.exercises.find((e) => e.id === id);
 
-// ---------------------------------------------------------------------------
-
-describe('calendrier des séances', () => {
-  it('la semaine 0 porte les cinq jours du combine, mercredi et dimanche exclus', () => {
-    expect(hasSession(0, 0)).toBe(true); // lundi
-    expect(hasSession(0, 1)).toBe(true); // mardi
-    expect(hasSession(0, 3)).toBe(true); // jeudi
-    expect(hasSession(0, 4)).toBe(true); // vendredi
-    expect(hasSession(0, 5)).toBe(true); // samedi
-    expect(hasSession(0, 2)).toBe(false); // mercredi : repos avant le deadlift
-    expect(hasSession(0, 6)).toBe(false); // dimanche : repos avant la semaine 1
-    expect(getSession(0, 2, ctx())).toBeNull();
+describe('semaine type (S1-3)', () => {
+  it('lundi : Goblet Squat 3 × 8 à RPE 7, et 25 min de zone 2 en fin de séance', () => {
+    const s = seance(1, 0);
+    const goblet = ex(s, 'goblet-squat')!;
+    expect(goblet.sets).toBe(3);
+    expect(goblet.targetRPE?.label).toBe('RPE 7');
+    const z2 = s.exercises[s.exercises.length - 1]!;
+    expect(z2.id).toBe('zone2-cardio');
+    expect(z2.work).toEqual({ kind: 'time', seconds: 25 * 60 });
   });
 
-  it('la semaine 1 est une semaine pleine', () => {
-    expect(hasSession(1, 0)).toBe(true); // lundi
-    expect(hasSession(1, 1)).toBe(false); // mardi
-    expect(hasSession(1, 3)).toBe(false); // jeudi
+  it('la forme du jour est demandée le lundi et le jeudi, pas le mardi ni le dimanche', () => {
+    expect(seance(1, 0).readinessTest).toBe(true);
+    expect(seance(1, 3).readinessTest).toBe(true);
+    expect(seance(1, 1).readinessTest).toBe(false);
+    expect(seance(1, 6).readinessTest).toBe(false);
   });
 
-  it('le lundi de la semaine 0 ouvre le combine par les sauts et le squat', () => {
-    const s = session(0, 0);
-    expect(s.title).toContain('sauts, sprints, squat');
-    expect(ids(s.exercises)).toEqual([
-      'test-broad-jump',
-      'test-vertical-jump',
-      'test-sprint-10m',
-      'test-sprint-20m',
-      'test-squat-1rm',
-    ]);
-  });
-
-  it('le deadlift du jeudi est seul — c’est tout l’intérêt du jour', () => {
-    const s = session(0, 3);
-    expect(ids(s.exercises)).toEqual(['test-deadlift-1rm']);
-    expect(find(s, 'test-deadlift-1rm').ramp?.length).toBe(8);
-  });
-
-  it('les tractions lestées du mardi sont seules aussi', () => {
-    expect(ids(session(0, 1).exercises)).toEqual(['test-weighted-pullup-1rm']);
-  });
-
-  it('le samedi regroupe les trois tests à l’épuisement, dans un ordre fixe', () => {
-    expect(ids(session(0, 5).exercises)).toEqual([
-      'test-strict-pullup-max',
-      'test-leg-raise-max',
-      'test-farmer-carry',
-    ]);
-  });
-});
-
-describe('bloc accumulation (S1-3)', () => {
-  it('mercredi S1 sort les charges du tableau', () => {
-    const s = session(1, 2);
-    expect(s.blockName).toBe('Accumulation');
-    expect(find(s, 'bench-press').loadLine).toBe('5 × 5 × 85 kg');
-    expect(find(s, 'bench-press').restSec).toBe(180);
-    expect(find(s, 'bench-press').targetRPE?.label).toBe('RPE 7');
-    expect(find(s, 'weighted-pullup').loadLine).toBe('4 × 5 × +20 kg');
-  });
-
-  it('lundi S2 : squat 5 × 5 × 82,5 et RDL 3 × 8 × 85', () => {
-    const s = session(2, 0);
-    expect(find(s, 'back-squat').loadLine).toBe('5 × 5 × 82,5 kg');
-    expect(find(s, 'rdl').loadLine).toBe('3 × 8 × 85 kg');
-    expect(find(s, 'bulgarian-split-squat').loadLine).toBe('3 × 8 / jambe — 2 × 18 kg');
-  });
-
-  it('l’échauffement est une liste cochable, pas un paragraphe', () => {
-    const s = session(2, 0);
-    expect(s.warmup?.id).toBe('lower');
-    expect(s.warmup?.items.length).toBe(7);
-    expect(s.warmup?.items[0]).toMatchObject({ id: 'wl-velo', label: 'Vélo' });
-  });
-
-  it('le readiness test n’est prévu que les jours jambes', () => {
-    expect(session(2, 0).readinessTest).toBe(true); // lundi
-    expect(session(2, 2).readinessTest).toBe(false); // mercredi
-    expect(session(2, 4).readinessTest).toBe(true); // vendredi
-    expect(session(2, 5).readinessTest).toBe(true); // samedi
-    expect(session(2, 6).readinessTest).toBe(false); // dimanche
-  });
-});
-
-describe('bloc force maximale (S5-7) — §8', () => {
-  it('les repos passent à 4 min sur squat et deadlift', () => {
-    expect(find(session(5, 0), 'back-squat').restSec).toBe(240);
-    expect(find(session(5, 5), 'deadlift').restSec).toBe(240);
-    expect(find(session(5, 2), 'bench-press').restSec).toBe(210);
-    expect(find(session(5, 2), 'weighted-pullup').restSec).toBe(180);
-  });
-
-  it('box jump 4 × 2, Bulgarian 4 × 5 RPE 8, hip thrust 4 × 6', () => {
-    const lundi = session(5, 0);
-    expect(find(lundi, 'box-jump').sets).toBe(4);
-    expect(find(lundi, 'box-jump').work).toMatchObject({ reps: 2 });
-    expect(find(lundi, 'bulgarian-split-squat').sets).toBe(4);
-    expect(find(lundi, 'bulgarian-split-squat').targetRPE?.label).toBe('RPE 8');
-    expect(find(session(5, 5), 'hip-thrust').sets).toBe(4);
-  });
-
-  it('les accessoires haut passent à 3 × 6 avec +10 %', () => {
-    const row = find(session(5, 2), 'chest-supported-row');
-    expect(row.sets).toBe(3);
-    expect(row.work).toMatchObject({ reps: 6 });
-    expect(row.load.kg).toBe(34); // 30 kg + 10 % = 33, arrondi au pas de 2 kg des haltères
-  });
-
-  it('dimanche passe tout à 3 séries et le conditioning à 6 × 20 s / 100 s', () => {
-    const s = session(5, 6);
-    expect(find(s, 'incline-db-press').sets).toBe(3);
-    expect(find(s, 'conditioning').work).toMatchObject({ rounds: 6, easySec: 100 });
-  });
-});
-
-describe('bloc puissance (S9-11) — contraste', () => {
-  it('lundi : pogos et box jumps de début supprimés, contraste sur le squat', () => {
-    const s = session(9, 0);
-    expect(ids(s.exercises)).not.toContain('pogo-jumps');
-    expect(ids(s.exercises)).not.toContain('box-jump');
-    const squat = find(s, 'back-squat');
-    expect(squat.contrast?.explosive).toBe('box-jump');
-    expect(squat.contrast?.restAfterHeavySec).toBe(120);
-    expect(squat.loadLine).toBe('4 × 2 × 92,5 kg');
-  });
-
-  it('mercredi : contraste bench / plyo push-up, 90 s après le bench (§10)', () => {
-    const s = session(9, 2);
-    expect(ids(s.exercises)).not.toContain('plyo-push-up');
-    expect(find(s, 'bench-press').contrast).toMatchObject({
-      explosive: 'plyo-push-up',
-      explosiveReps: 3,
-      restAfterHeavySec: 90,
+  it('dimanche : fractionné 8 × (20 s / 70 s)', () => {
+    expect(ex(seance(1, 6), 'conditioning')!.work).toEqual({
+      kind: 'intervals',
+      rounds: 8,
+      workSec: 20,
+      easySec: 70,
     });
   });
+});
 
-  it('samedi : contraste deadlift / broad jump', () => {
-    const s = session(9, 5);
-    expect(ids(s.exercises)).not.toContain('broad-jump');
-    expect(find(s, 'deadlift').contrast?.explosive).toBe('broad-jump');
-    expect(find(s, 'nordic-curl').sets).toBe(2);
+describe('force + muscle (S5-7) et muscle + densité (S9-11)', () => {
+  it('S5 : exercices principaux en 4 × 5-6, zone 2 à 30 min', () => {
+    const lundi = seance(5, 0);
+    const squat = ex(lundi, 'back-squat')!;
+    expect(squat.sets).toBe(4);
+    expect(squat.work).toMatchObject({ kind: 'reps', reps: { min: 5, max: 6 } });
+    expect(ex(lundi, 'zone2-cardio')!.work).toEqual({ kind: 'time', seconds: 30 * 60 });
+    expect(ex(seance(5, 1), 'bench-press')!.sets).toBe(4);
   });
 
-  it('vendredi : pogos ajoutés, ni dead bug ni conditioning', () => {
-    const s = session(9, 4);
-    expect(ids(s.exercises)).toContain('pogo-jumps');
-    expect(ids(s.exercises)).not.toContain('dead-bug-cable');
-    expect(ids(s.exercises)).not.toContain('explosive-cable-row');
-    expect(find(s, 'speed-squat').loadLine).toBe('8 × 2 × 65 kg');
+  it('S5 dimanche : fractionné ramené à 6 × (20 s / 100 s)', () => {
+    expect(ex(seance(5, 6), 'conditioning')!.work).toMatchObject({ rounds: 6, easySec: 100 });
   });
 
-  it('aucune progression automatique : le tableau tient, la vitesse pilote', () => {
-    const historique: Occurrence[] = [
-      {
-        exerciseId: 'back-squat',
-        week: 7,
-        day: 0,
-        kg: 97.5,
-        plannedKg: 97.5,
-        rpe: 6,
-        failed: false,
-        targetRPE: { min: 9, max: 9, label: 'RPE 9' },
-        completed: true,
-      },
-    ];
-    const s = session(9, 0, ctx({ history: { 'back-squat': historique } }));
-    expect(find(s, 'back-squat').suggestion?.case).toBeNull();
-    expect(find(s, 'back-squat').load.kg).toBe(92.5);
+  it('S9 : 4 × 6-8 sur les principaux, accessoires 3 × 10-12, zone 2 à 40 min', () => {
+    const jeudi = seance(9, 3);
+    expect(ex(jeudi, 'rdl')!.work).toMatchObject({ reps: { min: 6, max: 8 } });
+    expect(ex(jeudi, 'seated-leg-curl')!.work).toMatchObject({ reps: { min: 10, max: 12 } });
+    expect(ex(jeudi, 'zone2-cardio')!.work).toEqual({ kind: 'time', seconds: 40 * 60 });
   });
 });
 
-describe('deload (S4) — §8', () => {
-  it('les lifts tabulés prennent la valeur du tableau, pas la formule', () => {
-    expect(find(session(4, 0), 'back-squat').loadLine).toBe('3 × 3 × 70 kg');
-    expect(find(session(4, 0), 'rdl').loadLine).toBe('2 × 8 × 72,5 kg');
-    expect(find(session(4, 5), 'front-squat').loadLine).toBe('2 × 5 × 50 kg');
+describe('deload (S4, S8) et allègement (S12)', () => {
+  const h = histoire([
+    ['bench-press', 3, 1, 60],
+    ['chest-supported-row', 3, 1, 20],
+  ]);
+
+  it('S4 : 2 séries à 80 % de la dernière charge réelle, RPE ≤ 6', () => {
+    const s = seance(4, 1, { ...CTX, history: h });
+    const bench = ex(s, 'bench-press')!;
+    expect(bench.sets).toBe(2);
+    expect(bench.load.kg).toBe(47.5); // 60 × 0,8 = 48 → arrondi au 2,5 kg
+    expect(bench.targetRPE!.max).toBeLessThanOrEqual(6);
+    const row = ex(s, 'chest-supported-row')!;
+    expect(row.sets).toBe(2);
+    expect(row.load.kg).toBe(16);
   });
 
-  it('les accessoires non tabulés passent à 2 séries et 80 % de la charge réelle', () => {
-    const bulgarian = find(session(4, 0), 'bulgarian-split-squat');
-    expect(bulgarian.sets).toBe(2);
-    expect(bulgarian.load.kg).toBe(14); // 18 × 0,8 = 14,4 → 14 (pas de 2 kg)
-
-    const historique: Occurrence[] = [
-      {
-        exerciseId: 'hip-thrust',
-        week: 3,
-        day: 0,
-        kg: 120,
-        plannedKg: 100,
-        rpe: 7,
-        failed: false,
-        targetRPE: { min: 8, max: 8, label: 'RPE 8' },
-        completed: true,
-      },
-    ];
-    const hip = find(session(4, 5, ctx({ history: { 'hip-thrust': historique } })), 'hip-thrust');
-    expect(hip.load.kg).toBe(95); // 120 réels × 0,8 = 96 → 95
-    expect(hip.sets).toBe(2);
+  it('S4 : le fractionné disparaît, la zone 2 reste', () => {
+    const dimanche = seance(4, 6);
+    expect(ex(dimanche, 'conditioning')).toBeUndefined();
+    expect(ex(seance(4, 0), 'zone2-cardio')).toBeDefined();
   });
 
-  it('le volume de sauts est divisé par deux', () => {
-    const s = session(4, 0);
-    expect(find(s, 'pogo-jumps').sets).toBe(2); // 3 → 2
-    expect(find(s, 'box-jump').sets).toBe(2); // 4 → 2
-    expect(find(session(4, 4), 'broad-jump').sets).toBe(3); // 5 → 3
+  it('S8 : lundi et mardi allégés, jeudi et dimanche sont des bilans', () => {
+    expect(ex(seance(8, 1, { ...CTX, history: h }), 'bench-press')!.sets).toBe(2);
+    expect(seance(8, 3).title.startsWith('Combine')).toBe(true);
+    expect(seance(8, 6).title.startsWith('Combine')).toBe(true);
   });
 
-  it('ni Nordic ni conditioning', () => {
-    expect(ids(session(4, 5).exercises)).not.toContain('nordic-curl');
-    expect(ids(session(4, 6).exercises)).not.toContain('conditioning');
-  });
-
-  it('aucune cible au-dessus de RPE 6', () => {
-    for (const day of [0, 2, 4, 5, 6]) {
-      for (const ex of session(4, day).exercises) {
-        if (ex.targetRPE) expect(ex.targetRPE.max, `${ex.id}`).toBeLessThanOrEqual(6);
-      }
-    }
+  it('S12 : lundi et mardi allégés comme un deload, bilan final jeudi et dimanche', () => {
+    const mardi = seance(12, 1, { ...CTX, history: h });
+    expect(ex(mardi, 'bench-press')!.sets).toBe(2);
+    expect(ex(mardi, 'bench-press')!.load.kg).toBe(47.5);
+    expect(seance(12, 3).title).toContain('Combine final');
+    expect(seance(12, 6).title).toContain('Combine final');
   });
 });
 
-describe('semaine 8 — combine intermédiaire', () => {
-  it('samedi : tests d’abord, deadlift et front squat de deload ensuite', () => {
-    const s = session(8, 5);
-    expect(ids(s.exercises)).toEqual([
-      'test-broad-jump',
-      'test-vertical-jump',
-      'test-sprint-10m',
-      'test-sprint-20m',
-      'test-strict-pullup-max',
-      'test-farmer-carry',
-      'deadlift',
-      'front-squat',
-    ]);
-    expect(find(s, 'deadlift').loadLine).toBe('3 × 3 × 97,5 kg');
-    expect(find(s, 'front-squat').loadLine).toBe('2 × 4 × 55 kg');
-  });
+describe('forme du jour', () => {
+  const h = histoire([
+    ['goblet-squat', 1, 0, 24],
+    ['leg-press', 1, 0, 100],
+    ['db-rdl', 1, 0, 20],
+  ]);
 
-  it('mercredi S8 reste une séance de deload normale', () => {
-    expect(find(session(8, 2), 'bench-press').loadLine).toBe('3 × 3 × 82,5 kg');
-  });
-});
-
-describe('semaine 12 — taper', () => {
-  it('lundi accueille le bench et le push press du tableau', () => {
-    const s = session(12, 0);
-    expect(find(s, 'bench-press').loadLine).toBe('3 × 2 × 82,5 kg');
-    expect(find(s, 'push-press').loadLine).toBe('3 × 2 × 50 kg');
-    expect(find(s, 'back-squat').loadLine).toBe('3 × 2 × 77,5 kg');
-  });
-
-  it('mercredi est le test deadlift, et rien d’autre', () => {
-    const s = session(12, 2);
-    expect(ids(s.exercises)).toEqual(['test-deadlift-1rm']);
-  });
-
-  it('vendredi reste athlétique : tests puis speed squat léger', () => {
-    const s = session(12, 4);
-    expect(ids(s.exercises)).toEqual([
-      'test-broad-jump',
-      'test-vertical-jump',
-      'test-sprint-10m',
-      'test-sprint-20m',
-      'test-strict-pullup-max',
-      'test-leg-raise-max',
-      'speed-squat',
-    ]);
-    expect(find(s, 'speed-squat').loadLine).toBe('2 × 2 × 55 kg');
-  });
-
-  it('le front squat disparaît de la semaine 12 (« — » au tableau)', () => {
-    for (const day of [0, 2, 4, 5, 6]) {
-      expect(ids(session(12, day).exercises), `jour ${day}`).not.toContain('front-squat');
-    }
-  });
-});
-
-// ---------------------------------------------------------------------------
-// §4 — le feu tricolore modifie réellement la séance
-// ---------------------------------------------------------------------------
-
-describe('readiness ORANGE', () => {
-  const orange = ctx({ readiness: readiness(240, 230) }); // −4,2 %
-
-  it('−5 % sur les gros mouvements, arrondi au 2,5 kg', () => {
-    const s = session(5, 0, orange);
-    expect(find(s, 'back-squat').load.kg).toBe(85); // 90 × 0,95 = 85,5 → 85
-    expect(find(s, 'rdl').load.kg).toBe(85); // 90 × 0,95 = 85,5 → 85
-  });
-
-  it('−5 % au Bulgarian, arrondi au 2 kg', () => {
-    const bulgarian = find(session(5, 0, orange), 'bulgarian-split-squat');
-    expect(bulgarian.load.kg).toBe(18); // 18 × 0,95 = 17,1 → 18 (pas de 2 kg)
-  });
-
-  it('une série de moins sur les accessoires', () => {
-    const vert = session(5, 0);
-    const o = session(5, 0, orange);
-    expect(find(vert, 'bulgarian-split-squat').sets).toBe(4);
-    expect(find(o, 'bulgarian-split-squat').sets).toBe(3);
-  });
-
-  it('la séance dit ce qu’elle a changé', () => {
-    const s = session(5, 0, orange);
+  it('ORANGE : −5 % sur les gros mouvements, une série de moins sur les accessoires', () => {
+    const orange = readinessFromAnswers([true, false, false]);
+    const s = seance(2, 0, { ...CTX, history: h, readiness: orange });
+    expect(ex(s, 'leg-press')!.load.kg).toBe(95);
+    expect(ex(s, 'db-rdl')!.sets).toBe(2);
     expect(s.adjustments.some((a) => a.source === 'orange')).toBe(true);
-    expect(find(s, 'back-squat').adjustments.some((a) => a.source === 'orange')).toBe(true);
   });
 
-  it('la suggestion de progression est allégée elle aussi', () => {
-    const historique: Occurrence[] = [
-      {
-        exerciseId: 'back-squat',
-        week: 4,
-        day: 0,
-        kg: 70,
-        plannedKg: 70,
-        rpe: 3,
-        failed: false,
-        targetRPE: { min: 5, max: 5, label: 'RPE 5' },
-        completed: true,
-      },
-    ];
-    const s = session(5, 0, ctx({ readiness: readiness(240, 230), history: { 'back-squat': historique } }));
-    const squat = find(s, 'back-squat');
-    expect(squat.suggestion?.case).toBe(2);
-    // 90 + 5 = 95, puis −5 % = 90,25 → 90
-    expect(squat.suggestion?.suggestedKg).toBe(90);
+  it('ROUGE : principal en 3 × 3 à 60 % de la dernière charge, tronc et 20 min de zone 2', () => {
+    const rouge = readinessFromAnswers([true, true, false]);
+    const s = seance(2, 0, { ...CTX, history: h, readiness: rouge });
+    const goblet = ex(s, 'goblet-squat')!;
+    expect(goblet.sets).toBe(3);
+    expect(goblet.load.kg).toBe(14); // 24 × 0,6 = 14,4 → arrondi au 2 kg
+    expect(ex(s, 'dead-bug')).toBeDefined();
+    expect(ex(s, 'zone2-cardio')!.work).toEqual({ kind: 'time', seconds: 20 * 60 });
+    expect(ex(s, 'leg-press')).toBeUndefined();
+    expect(ex(s, 'step-up')).toBeUndefined();
+  });
+
+  it('ROUGE sans historique : l’appli le dit au lieu d’inventer une charge', () => {
+    const rouge = readinessFromAnswers([true, true, true]);
+    const goblet = ex(seance(1, 0, { ...CTX, readiness: rouge }), 'goblet-squat')!;
+    expect(goblet.load.kg).toBeNull();
+    expect(goblet.notes.join(' ')).toContain('moitié');
   });
 });
 
-describe('readiness ROUGE', () => {
-  const rouge = ctx({ readiness: readiness(240, 220) }); // −8,3 %
-
-  it('le lift principal devient 3 × 3 à 65 % du 1RM testé', () => {
-    const squat = find(session(5, 0, rouge), 'back-squat');
-    expect(squat.sets).toBe(3);
-    expect(squat.work).toMatchObject({ reps: 3 });
-    expect(squat.load.kg).toBe(72.5); // 110 × 0,65 = 71,5 → 72,5
-    expect(squat.loadLine).toBe('3 × 3 × 72,5 kg');
-    expect(squat.targetRPE).toBeNull();
+describe('progression (débutant)', () => {
+  it('première séance : aucune suggestion, la charge se choisit au RPE', () => {
+    expect(ex(seance(1, 1), 'bench-press')!.suggestion).toBeNull();
   });
 
-  it('il ne reste que le lift principal, le tronc et la mobilité', () => {
-    expect(ids(session(5, 0, rouge).exercises)).toEqual(['back-squat', 'ab-wheel']);
-    expect(ids(session(5, 5, rouge).exercises)).toEqual(['deadlift', 'copenhagen-plank']);
+  it('RPE 6 pour 7 prévu → +2,5 kg la semaine suivante, à confirmer', () => {
+    const history: HistoryIndex = { 'bench-press': [occ('bench-press', 1, 1, 50, 6, rpe(7))] };
+    const s = ex(seance(2, 1, { ...CTX, history }), 'bench-press')!;
+    expect(s.load.kg).toBe(50);
+    expect(s.suggestion?.suggestedKg).toBe(52.5);
+    expect(s.suggestion?.requiresConfirm).toBe(true);
   });
 
-  it('aucun mouvement explosif ne survit', () => {
-    // Les trois jours jambes, ceux qui portent un readiness test : lundi,
-    // vendredi, samedi.
-    for (const day of [0, 4, 5]) {
-      for (const ex of session(5, day, rouge).exercises) {
-        expect(ex.def.explosive, `${ex.id}`).not.toBe(true);
-      }
-    }
-  });
-
-  it('sans 1RM renseigné, l’appli le dit au lieu d’inventer une charge', () => {
-    const sansRM = ctx({ readiness: readiness(240, 220) });
-    sansRM.settings = { ...sansRM.settings, oneRM: {} };
-    const squat = find(session(5, 0, sansRM), 'back-squat');
-    expect(squat.load.kg).toBeNull();
-    expect(squat.notes.join(' ')).toContain('Renseigne ton 1RM');
-  });
-
-  it('aucune suggestion de progression un jour rouge', () => {
-    expect(find(session(5, 0, rouge), 'back-squat').suggestion).toBeNull();
-  });
-});
-
-describe('readiness VERT', () => {
-  it('ne change strictement rien', () => {
-    const vert = ctx({ readiness: readiness(240, 245) });
-    expect(session(5, 0, vert).exercises.map((e) => e.loadLine)).toEqual(
-      session(5, 0).exercises.map((e) => e.loadLine),
-    );
-  });
-});
-
-describe('§11 cas 7 — sauts en baisse', () => {
-  const decline = ctx({ explosiveDecline: true });
-
-  it('les lifts principaux passent à 3 séries', () => {
-    expect(find(session(5, 0), 'back-squat').sets).toBe(5);
-    expect(find(session(5, 0, decline), 'back-squat').sets).toBe(3);
-  });
-
-  it('le conditioning disparaît', () => {
-    expect(ids(session(5, 6).exercises)).toContain('conditioning');
-    expect(ids(session(5, 6, decline).exercises)).not.toContain('conditioning');
-  });
-
-  it('les accessoires ne sont pas touchés', () => {
-    expect(find(session(5, 0, decline), 'bulgarian-split-squat').sets).toBe(4);
-  });
-});
-
-// ---------------------------------------------------------------------------
-
-describe('robustesse — toutes les séances du programme', () => {
-  it('se construisent sans erreur, avec une ligne de charge non vide', () => {
-    for (let week = 0; week <= 12; week++) {
-      for (const day of [0, 2, 4, 5, 6] as DayIndex[]) {
-        if (!hasSession(week as WeekIndex, day)) continue;
-        const s = getSession(week as WeekIndex, day, ctx())!;
-        expect(s, `S${week} jour ${day}`).not.toBeNull();
-        expect(s.exercises.length, `S${week} jour ${day}`).toBeGreaterThan(0);
-        for (const ex of s.exercises) {
-          expect(ex.loadLine.length, `S${week} j${day} ${ex.id}`).toBeGreaterThan(0);
-          expect(ex.restSec, `S${week} j${day} ${ex.id}`).toBeGreaterThanOrEqual(0);
-        }
-      }
-    }
-  });
-
-  it('résistent aux trois états du feu tricolore', () => {
-    for (const cm of [245, 230, 215]) {
-      const c = ctx({ readiness: readiness(240, cm) });
-      for (let week = 1; week <= 12; week++) {
-        for (const day of [0, 2, 4, 5, 6] as DayIndex[]) {
-          if (!hasSession(week as WeekIndex, day)) continue;
-          expect(() => getSession(week as WeekIndex, day, c)).not.toThrow();
-        }
-      }
-    }
+  it('même très facile, jamais plus de +2,5 kg', () => {
+    const history: HistoryIndex = { 'leg-press': [occ('leg-press', 1, 0, 100, 5, rpe(7))] };
+    const s = ex(seance(2, 0, { ...CTX, history }), 'leg-press')!;
+    expect(s.suggestion?.suggestedKg).toBe(102.5);
   });
 });

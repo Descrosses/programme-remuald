@@ -725,3 +725,36 @@
   color: var(--vert);
   font-weight: 600;
 }
+
+/* -------------------------------------------- readiness en 3 questions -- */
+
+.question {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px 0;
+  border-top: 1px solid var(--surface-3);
+}
+
+.questionText {
+  font-weight: 600;
+}
+
+.yesNo {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.yesNoButton {
+  height: var(--tap);
+  border-radius: var(--radius-sm);
+  background: var(--surface-2);
+  color: var(--ink-2);
+  font-weight: 700;
+}
+
+.yesNoOn {
+  background: var(--accent);
+  color: var(--ink-on-accent);
+}

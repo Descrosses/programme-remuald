@@ -7,7 +7,7 @@ import { VitePWA } from 'vite-plugin-pwa';
  * Si tu renommes le dépôt, c'est la seule ligne à changer — le workflow de
  * déploiement passe la bonne valeur automatiquement via GITHUB_PAGES_BASE.
  */
-const base = process.env.GITHUB_PAGES_BASE ?? '/programme-12-semaines/';
+const base = process.env.GITHUB_PAGES_BASE ?? '/programme-remuald/';
 
 export default defineConfig({
   base,
@@ -33,10 +33,10 @@ export default defineConfig({
         cleanupOutdatedCaches: true,
       },
       manifest: {
-        name: 'Programme 12 semaines',
-        short_name: '12 semaines',
+        name: 'Programme Remuald',
+        short_name: 'Remuald',
         description:
-          'Programme de préparation physique de 12 semaines : séances, charges, readiness et progression, hors ligne.',
+          'Programme de remise en forme de Remuald : séances, charges, forme du jour, nutrition et progression, hors ligne.',
         lang: 'fr',
         dir: 'ltr',
         start_url: base,

@@ -7,7 +7,7 @@ import { DAY_LABELS, type DayIndex, type WeekIndex } from '../data/types';
 import { humanDate } from '../engine/calendar';
 import { fr } from '../engine/format';
 import type { ResolvedExercise } from '../engine/getSession';
-import { bestJump, readiness as computeReadiness } from '../engine/readiness';
+import { readinessFromAnswers } from '../engine/readiness';
 import {
   saveReadiness,
   saveSet,
@@ -106,18 +106,18 @@ export function SessionScreen({
     await data.reload();
   }
 
-  async function handleReadiness(attempts: Array<number | null>) {
-    const best = bestJump(attempts);
-    const result = computeReadiness(data.baselineCm, best);
-    if (best === null || !result) return;
+  async function handleReadiness(answers: Array<boolean | null>) {
+    const result = readinessFromAnswers(answers);
+    if (!result) return;
     await saveReadiness({
       date: data.date,
       week,
       day,
-      attempts,
-      jumpCm: best,
+      // 1 = oui, 0 = non : le schéma de la base reste celui des sauts.
+      attempts: answers.map((a) => (a === null ? null : a ? 1 : 0)),
+      jumpCm: result.jumpCm,
       level: result.level,
-      pctDelta: result.pctDelta,
+      pctDelta: 0,
     });
     await data.reload();
   }
@@ -187,8 +187,9 @@ export function SessionScreen({
 
       {session.readinessTest && (
         <ReadinessSection
-          baselineCm={data.baselineCm}
-          attempts={data.readinessRow?.attempts ?? [null, null, null]}
+          answers={(data.readinessRow?.attempts ?? [null, null, null]).map((a) =>
+            a === null || a === undefined ? null : a === 1,
+          )}
           result={data.readiness}
           onSave={(a) => void handleReadiness(a)}
         />
@@ -245,9 +246,7 @@ export function SessionScreen({
             <>
               <dt>Readiness</dt>
               <dd>
-                {data.readiness.level.toUpperCase()} · {data.readiness.jumpCm} cm (
-                {data.readiness.pctDelta > 0 ? '+' : ''}
-                {fr(data.readiness.pctDelta)} %)
+                {data.readiness.level.toUpperCase()} · {data.readiness.jumpCm} oui sur 3
               </dd>
             </>
           )}

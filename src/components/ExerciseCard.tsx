@@ -238,7 +238,7 @@ export function ExerciseCard({
             {openCues
               ? '▲ Masquer les consignes'
               : ex.def.altBasicFit
-                ? '▼ Consignes et alternative Basic-Fit'
+                ? '▼ Consignes et alternative'
                 : '▼ Consignes'}
           </button>
           {openCues && (
@@ -256,7 +256,7 @@ export function ExerciseCard({
               )}
               {ex.def.altBasicFit && (
                 <p>
-                  <b>Alternative Basic-Fit :</b> {ex.def.altBasicFit}
+                  <b>Alternative :</b> {ex.def.altBasicFit}
                 </p>
               )}
             </div>

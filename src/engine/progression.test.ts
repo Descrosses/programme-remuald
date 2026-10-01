@@ -105,22 +105,22 @@ describe('cas 1 — RPE atteint = RPE prévu', () => {
 });
 
 describe('cas 2 — beaucoup trop facile', () => {
-  it('l’exemple de Guillaume : S5 à RPE 6 pour 8 prévu → S6 = 120 + 5 = 125', () => {
+  it('programme Remuald (débutant) : S5 à RPE 6 pour 8 prévu → S6 = 120 + 2,5, jamais +5', () => {
     const r = run({
       plannedKg: 120, // tableau S6
       targetRPE: rpe(8.5),
       history: [occ(5, 115, 6, rpe(8))],
     });
     expect(r.case).toBe(2);
-    expect(r.suggestedKg).toBe(125);
+    expect(r.suggestedKg).toBe(122.5);
     expect(r.reason).toContain('cas 2');
     expect(r.requiresConfirm).toBe(true);
   });
 
-  it('+5 kg en bas du corps, +2,5 kg en haut — et pas davantage', () => {
+  it('débutant : +2,5 kg en bas comme en haut du corps — et pas davantage', () => {
     const bas = run({ plannedKg: 120, history: [occ(5, 115, 6, rpe(8))], isLowerBody: true });
     const haut = run({ plannedKg: 120, history: [occ(5, 115, 6, rpe(8))], isLowerBody: false });
-    expect(bas.suggestedKg).toBe(125);
+    expect(bas.suggestedKg).toBe(122.5);
     expect(haut.suggestedKg).toBe(122.5);
   });
 
@@ -147,14 +147,14 @@ describe('exception du deadlift en semaine 1', () => {
   const deadlift = (week: number, kg: number, actualRpe: number, target: RPETarget) =>
     occ(week, kg, actualRpe, target, { exerciseId: 'deadlift' });
 
-  it('RPE 6 en S1 déclenche le cas 2 (+5 kg), pas le cas 3', () => {
+  it('RPE 6 en S1 déclenche le cas 2 (+2,5 kg pour un débutant), pas le cas 3', () => {
     const r = run({
       plannedKg: 102.5, // tableau S2
       targetRPE: rpe(7.5),
       history: [deadlift(1, 97.5, 6, rpe(7))],
     });
     expect(r.case).toBe(2);
-    expect(r.suggestedKg).toBe(107.5);
+    expect(r.suggestedKg).toBe(105);
   });
 
   it('l’exception s’arrête à RPE 6 : 6,5 repasse par la règle générale', () => {
@@ -303,7 +303,7 @@ describe('progression cumulative — le décalage persiste', () => {
     });
     expect(r.offsetKg).toBe(5);
     expect(r.case).toBe(2);
-    expect(r.suggestedKg).toBe(135); // 125 + 5 (décalage) + 5 (cas 2)
+    expect(r.suggestedKg).toBe(132.5); // 125 + 5 (décalage) + 2,5 (cas 2, débutant)
   });
 
   it('un décalage négatif se reporte aussi', () => {

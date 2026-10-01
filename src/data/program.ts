@@ -36,17 +36,8 @@ export {
 export {
   COMBINE_METRICS,
   COMBINE_S8_METRICS,
-  MESURES_COMBINE,
   RAMPS,
   RAMPS_S12,
-  RAMP_BENCH,
-  RAMP_BENCH_S12,
-  RAMP_DEADLIFT,
-  RAMP_DEADLIFT_S12,
-  RAMP_PULLUP,
-  RAMP_PULLUP_S12,
-  RAMP_SQUAT,
-  RAMP_SQUAT_S12,
   SPECIAL_SESSIONS,
   TARGETS_12_WEEKS,
   isCombineDay,
@@ -76,50 +67,50 @@ export interface BlockInfo {
 export const BLOCKS: Record<Block, BlockInfo> = {
   test: {
     block: 'test',
-    name: 'Combine initial',
-    short: 'Combine',
-    intensityLabel: 'Tests 1RM',
-    objective: 'Établir les références : 1RM, sauts, sprint, référence de readiness',
+    name: 'Bilan initial',
+    short: 'Bilan',
+    intensityLabel: 'Tests RPE 8',
+    objective: 'Établir les références : forces sur 5 ou 8 répétitions, gainage, vélo, mensurations',
     color: '#7ac4a0',
   },
   accumulation: {
     block: 'accumulation',
-    name: 'Accumulation',
-    short: 'Accum',
-    intensityLabel: '71-79 %',
-    objective: 'Base de force, technique hinge, apprentissage des sauts',
+    name: 'Apprentissage',
+    short: 'Appr.',
+    intensityLabel: 'RPE 7',
+    objective: 'Apprendre les gestes, construire la base, cardio en zone 2 après chaque séance',
     color: '#5aa7e0',
   },
   deload: {
     block: 'deload',
     name: 'Deload',
     short: 'Deload',
-    intensityLabel: '65-70 %',
-    objective: 'Dissipation de fatigue',
+    intensityLabel: 'RPE ≤ 6',
+    objective: 'Semaine allégée : 2 séries à −20 %, la fatigue retombe',
     color: '#8fa3b5',
   },
   maxforce: {
     block: 'maxforce',
-    name: 'Force maximale',
+    name: 'Force + muscle',
     short: 'Force',
-    intensityLabel: '82-90 %',
-    objective: 'Force absolue, longs repos',
+    intensityLabel: 'RPE 7,5-8',
+    objective: 'Exercices principaux en 4 × 5-6, squat barre si la technique est validée, zone 2 à 30 min',
     color: '#e5533d',
   },
   power: {
     block: 'power',
-    name: 'Puissance',
-    short: 'Puiss.',
-    intensityLabel: '84-89 % + vitesse 55-60 %',
-    objective: 'Contraste, RFD, fraîcheur',
+    name: 'Muscle + densité',
+    short: 'Densité',
+    intensityLabel: 'RPE 7,5-8',
+    objective: 'Plus de répétitions, repos plus courts, zone 2 à 40 min',
     color: '#f2b33d',
   },
   taper: {
     block: 'taper',
-    name: 'Taper + combine final',
-    short: 'Taper',
+    name: 'Allègement + bilan final',
+    short: 'Final',
     intensityLabel: 'Léger',
-    objective: 'Tests',
+    objective: 'Lundi et mardi allégés, bilan final jeudi et dimanche',
     color: '#7ac4a0',
   },
 };
@@ -161,7 +152,7 @@ export const WEEK_BLOCKS: Record<WeekIndex, Block> = {
  * La semaine 1 démarre le lundi suivant, avec ses cinq séances.
  */
 export const WEEK_DAYS: Record<WeekIndex, readonly DayIndex[]> = {
-  0: [0, 1, 3, 4, 5],
+  0: [0, 1, 3],
   1: TRAINING_DAYS,
   2: TRAINING_DAYS,
   3: TRAINING_DAYS,
@@ -194,8 +185,8 @@ export const READINESS_THRESHOLDS = {
     accessorySetsDelta: -1,
   },
   red: {
-    /** « technique à 60-70 % » → 65 %, milieu de fourchette (décision de Guillaume). */
-    pctOf1RM: 0.65,
+    /** Pas de 1RM : technique légère à 60 % de la dernière charge réelle. */
+    pctOf1RM: 0.6,
     sets: 3,
     reps: 3,
   },
@@ -208,19 +199,20 @@ export const READINESS_THRESHOLDS = {
  * aussi le push press et le speed squat ne coûte rien et reste cohérent.
  */
 export const BIG_MOVEMENT_IDS = [
+  'goblet-squat',
   'back-squat',
   'bench-press',
-  'deadlift',
-  'front-squat',
+  'lat-pulldown',
   'rdl',
   'hip-thrust',
-  'bulgarian-split-squat',
+  'leg-press',
 ] as const;
 
 /** §11 — les 7 cas, avec les incréments écrits dans le programme. */
 export const PROGRESSION_RULES = {
   /** Cas 2 : RPE 6-6,5 pour 8 prévu. */
-  wayTooEasy: { rpeGapAtLeast: 1.5, lowerBodyKg: 5, upperBodyKg: 2.5 },
+  wayTooEasy: { rpeGapAtLeast: 1.5, lowerBodyKg: 2.5, upperBodyKg: 2.5 },
+  // ↑ Débutant (modèle §2.3) : jamais plus de +2,5 kg d'une séance à l'autre.
   /** Cas 3 : RPE 7 pour 8 prévu. */
   slightlyTooEasy: { rpeGapAtLeast: 0.5, kg: 2.5 },
   /** Cas 4 : RPE 9 pour 8 prévu → même charge. Deux fois de suite → tableau −5 %. */

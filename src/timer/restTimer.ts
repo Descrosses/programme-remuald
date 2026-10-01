@@ -11,7 +11,7 @@
  * rendu. L'historique, lui, est en base.
  */
 
-const KEY = 'p12s:rest-timer';
+const KEY = 'premuald:rest-timer';
 
 export interface RestTimerState {
   /** Horodatage de fin, en ms epoch. */

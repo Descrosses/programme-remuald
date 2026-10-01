@@ -99,7 +99,7 @@ describe('rien ne change pour les autres mouvements', () => {
    * ce test le dira — et il faudra alors vérifier ce que §11 en fait, au lieu
    * de le découvrir dans les charges proposées.
    */
-  it('le Broad Jump est le SEUL exercice à revenir deux fois dans une semaine', () => {
+  it('programme Remuald : seul le cardio en zone 2 revient plusieurs fois dans une semaine', () => {
     const ctx: SessionContext = {
       ...EMPTY_CONTEXT,
       settings: { ...EMPTY_CONTEXT.settings, startDate: '2026-09-14' },
@@ -119,7 +119,7 @@ describe('rien ne change pour les autres mouvements', () => {
       .filter(([, semaines]) => [...semaines.values()].some((jours) => jours.size > 1))
       .map(([id]) => id)
       .sort();
-    expect(deuxFois).toEqual(['broad-jump']);
+    expect(deuxFois).toEqual(['zone2-cardio']);
   });
 
   it('les autres multi-jours ne se croisent jamais dans la même semaine', () => {

@@ -72,7 +72,7 @@ describe('chrono de repos', () => {
 
   it('un stockage vide ou corrompu ne fait pas planter l’appli', () => {
     expect(readTimer()).toBeNull();
-    localStorage.setItem('p12s:rest-timer', '{pas du json');
+    localStorage.setItem('premuald:rest-timer', '{pas du json');
     expect(readTimer()).toBeNull();
     writeTimer(null);
     expect(readTimer()).toBeNull();

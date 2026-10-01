@@ -48,11 +48,12 @@ export const ADJUST_RULES = {
   /** Variation hebdomadaire en deçà de laquelle le poids est jugé stable. */
   stableKg: 0.15,
   stableWeeks: 3,
-  /** Prise hebdomadaire au-delà de laquelle on freine. */
-  fastGainKg: 0.4,
-  fastGainWeeks: 2,
-  /** Hausse de tour de taille qui confirme que la prise n'est pas que musculaire. */
-  waistRiseCm: 0.5,
+  /**
+   * Programme Remuald (perte de poids) : perte hebdomadaire au-delà de
+   * laquelle on remet à manger — 1 % du poids de départ.
+   */
+  fastLossKg: 1.1,
+  fastLossWeeks: 2,
 } as const;
 
 const MS_PER_DAY = 86_400_000;
@@ -181,7 +182,7 @@ const NO_ADVICE: NutritionAdvice = { kind: 'none', title: '', action: '', weeks:
  * semaines, on ne dit rien plutôt que de conseiller à l'aveugle.
  */
 export function nutritionAdvice(entries: Measurement[], todayIso: string): NutritionAdvice {
-  const needed = Math.max(ADJUST_RULES.stableWeeks, ADJUST_RULES.fastGainWeeks) + 1;
+  const needed = Math.max(ADJUST_RULES.stableWeeks, ADJUST_RULES.fastLossWeeks) + 1;
   const points = weeklyAverages(entries, todayIso, needed);
 
   /** Variation de la semaine `i` par rapport à la précédente. `null` si trou. */
@@ -191,34 +192,25 @@ export function nutritionAdvice(entries: Measurement[], todayIso: string): Nutri
     return a != null && b != null ? round(a - b) : null;
   };
 
-  // Prise trop rapide d'abord : c'est le signal qu'on veut voir en premier, et
-  // une prise rapide n'est jamais « stable » — les deux cas s'excluent.
-  const fast = Array.from({ length: ADJUST_RULES.fastGainWeeks }, (_, i) => delta(i));
-  if (fast.every((d) => d !== null && d > ADJUST_RULES.fastGainKg)) {
-    const waistNow = latestWaist(entries, points[0]!.endDate);
-    const waistThen = latestWaist(entries, points[ADJUST_RULES.fastGainWeeks]!.endDate);
-    const waistRising =
-      waistNow !== null &&
-      waistThen !== null &&
-      waistNow - waistThen > ADJUST_RULES.waistRiseCm;
-
+  // Perte trop rapide d'abord : au-delà de 1 % par semaine, on perd du muscle
+  // et on prépare l'effet yo-yo. Les deux cas s'excluent.
+  const fast = Array.from({ length: ADJUST_RULES.fastLossWeeks }, (_, i) => delta(i));
+  if (fast.every((d) => d !== null && d < -ADJUST_RULES.fastLossKg)) {
     return {
-      kind: 'remove',
-      weeks: ADJUST_RULES.fastGainWeeks,
-      title: `Prise rapide depuis ${ADJUST_RULES.fastGainWeeks} semaines`,
-      action: waistRising
-        ? 'Retire 50 g de féculent au dîner. Ton tour de taille suit la même hausse : la prise n’est pas uniquement musculaire.'
-        : 'Retire 50 g de féculent au dîner.',
+      kind: 'add',
+      weeks: ADJUST_RULES.fastLossWeeks,
+      title: `Perte trop rapide depuis ${ADJUST_RULES.fastLossWeeks} semaines`,
+      action: 'Ajoute 50 g de féculent au dîner. Perdre plus vite ferait fondre du muscle.',
     };
   }
 
   const stable = Array.from({ length: ADJUST_RULES.stableWeeks }, (_, i) => delta(i));
   if (stable.every((d) => d !== null && Math.abs(d) <= ADJUST_RULES.stableKg)) {
     return {
-      kind: 'add',
+      kind: 'remove',
       weeks: ADJUST_RULES.stableWeeks,
       title: `Poids stable depuis ${ADJUST_RULES.stableWeeks} semaines`,
-      action: 'Ajoute 50 g de féculent au dîner.',
+      action: 'Retire 50 g de féculent au dîner.',
     };
   }
 

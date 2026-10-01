@@ -128,9 +128,8 @@ export function NutritionScreen({
       <header className={styles.header}>
         <h1 className={styles.h1}>Nutrition</h1>
         <p className={styles.lead}>
-          Beaucoup de glucides, protéines élevées, lipides modérés. Six prises un jour
-          d’entraînement, cinq au repos — la sixième est une collation de 8 h qui se prépare la
-          veille et se boit d’une main.
+          Perte de graisse sans privation : protéines élevées, glucides autour de la séance.
+          Cinq prises par jour, calées sur les coupures du chantier.
         </p>
       </header>
 
@@ -312,10 +311,9 @@ export function NutritionScreen({
               de {target.kcal.toLocaleString('fr-FR')}.
             </b>{' '}
             Ces portions te font manger {fr(Math.abs(ecart.pct))} % de <b>moins</b> que prévu — à ce
-            niveau tu ne prendras pas de poids. Il faudrait environ{' '}
+            niveau tu risques de perdre du muscle et de craquer. Il faudrait environ{' '}
             {starchToCloseGap(ecart.kcal).toLocaleString('fr-FR')} g de féculent cuit en plus sur la
-            journée : à ce volume, une sixième prise est plus tenable que des assiettes plus
-            grosses.
+            journée.
           </p>
         )}
         {verdict === 'surplus' && (
@@ -325,7 +323,7 @@ export function NutritionScreen({
               {' '}({target.kcal.toLocaleString('fr-FR')} visées).
             </b>{' '}
             Ces portions te font manger {fr(Math.abs(ecart.pct))} % de <b>plus</b> que prévu — au-delà
-            de la cible, ce que tu prends en trop part surtout en gras. Il faudrait retirer environ{' '}
+            de la cible, ta perte de graisse ralentit. Il faudrait retirer environ{' '}
             {starchToCloseGap(ecart.kcal).toLocaleString('fr-FR')} g de féculent cuit sur la journée.
             Vérifie aussi les lignes marquées « modifié » : une étiquette mal recopiée se voit ici
             avant de se voir sur la balance.
@@ -367,14 +365,14 @@ export function NutritionScreen({
             value={todayRow.waistCm}
             step={0.5}
             min={60}
-            max={150}
+            max={170}
             unit="cm"
             onStep={(d) => void patchToday({ waistCm: stepValue(todayRow.waistCm, d, 60, 150) })}
             onCommit={(v) => void patchToday({ waistCm: v })}
           />
           <p className={styles.fieldHint}>
-            Optionnel, toutes les 1 à 2 semaines, même repère et même moment. Il ne sert qu'à
-            trancher un cas ambigu : poids qui monte, tour de taille qui suit.
+            Toutes les 1 à 2 semaines, même repère et même moment. S’il baisse, tu perds bien de la
+            graisse, même les semaines où la balance stagne.
           </p>
         </div>
       </section>
@@ -401,8 +399,8 @@ export function NutritionScreen({
         {trend.deltaKg !== null && (
           <p className={styles.fieldHint} style={{ color: trend.onTarget ? 'var(--vert)' : undefined }}>
             {trend.onTarget
-              ? `Dans la fourchette visée (+${fr(TARGET_GAIN_KG_PER_WEEK.min)} à +${fr(TARGET_GAIN_KG_PER_WEEK.max)} kg par semaine).`
-              : `Fourchette visée : +${fr(TARGET_GAIN_KG_PER_WEEK.min)} à +${fr(TARGET_GAIN_KG_PER_WEEK.max)} kg par semaine. Viser 80-81 kg avec de meilleures performances vaut mieux que forcer jusqu’à 84.`}
+              ? `Dans la fourchette visée (${fr(TARGET_GAIN_KG_PER_WEEK.max)} à ${fr(TARGET_GAIN_KG_PER_WEEK.min)} kg par semaine).`
+              : `Fourchette visée : ${fr(TARGET_GAIN_KG_PER_WEEK.max)} à ${fr(TARGET_GAIN_KG_PER_WEEK.min)} kg par semaine. Plus vite, tu perdrais du muscle et tu préparerais l’effet yo-yo.`}
           </p>
         )}
         {waist !== null && (
