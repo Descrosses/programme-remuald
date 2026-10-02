@@ -32,8 +32,8 @@ export interface SetPayload {
  */
 const MEASURE = {
   cm: { label: 'Distance', unit: 'cm', step: 5, min: 50, max: 400 },
-  s: { label: 'Temps', unit: 's', step: 0.1, min: 0.5, max: 60 },
-  m: { label: 'Distance', unit: 'm', step: 5, min: 5, max: 200 },
+  s: { label: 'Temps', unit: 's', step: 5, min: 0, max: 600 },
+  m: { label: 'Distance', unit: 'm', step: 10, min: 0, max: 20000 },
   kg: { label: 'Charge', unit: 'kg', step: 2.5, min: 0, max: 300 },
   reps: { label: 'Reps', unit: '', step: 1, min: 0, max: 60 },
 } as const;
@@ -574,6 +574,9 @@ export function measureOf(ex: ResolvedExercise): (typeof MEASURE)[keyof typeof M
  * sa distance aussi.
  */
 export function showsLoadField(ex: ResolvedExercise): boolean {
+  // Un test noté en kilos : la mesure EST la charge. Un deuxième champ
+  // « Charge · PDC » à côté ferait noter la même chose deux fois.
+  if (measureOf(ex)?.unit === 'kg') return false;
   if (ex.load.shape !== 'none') return true;
   const m = ex.def.measure;
   return !(m !== undefined && MESURE_CHIFFREE.has(m));

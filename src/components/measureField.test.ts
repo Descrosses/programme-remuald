@@ -71,3 +71,26 @@ describe('programme Remuald — ce qui se mesure en distance ou en temps', () =>
     }
   });
 });
+
+describe('bilans notés en kilos', () => {
+  it('un seul champ « Charge · kg », jamais doublé d’un champ PDC', () => {
+    for (const id of ['test-leg-press-5rm', 'test-bench-5rm', 'test-lat-pulldown-5rm', 'test-hip-thrust-8rm']) {
+      const ex = trouve(id);
+      expect(measureOf(ex)?.unit, id).toBe('kg');
+      expect(showsLoadField(ex), id).toBe(false);
+    }
+  });
+
+  it('la planche du bilan se note en secondes, par pas de 5, à partir de 0', () => {
+    const m = measureOf(trouve('test-plank-max'))!;
+    expect(m.unit).toBe('s');
+    expect(m.step).toBe(5);
+    expect(m.min).toBe(0);
+  });
+
+  it('le vélo de 10 min se note en mètres, sans plafond à 200 m', () => {
+    const m = measureOf(trouve('test-bike-10min'))!;
+    expect(m.unit).toBe('m');
+    expect(m.max).toBeGreaterThanOrEqual(10000);
+  });
+});
