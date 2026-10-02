@@ -242,7 +242,8 @@ const TRAIN: NutritionTarget = {
 // ---------------------------------------------------------------------------
 // Jour de repos (mercredi, vendredi, samedi)
 //
-// Mêmes cinq prises, mêmes protéines : seul le pain du petit-déjeuner baisse.
+// Mêmes cinq prises, mêmes protéines : le pain du matin et le féculent du soir
+// baissent (2 tranches au lieu de 3, 100 g au lieu de 150 g).
 // ---------------------------------------------------------------------------
 
 const REVEIL_REPOS: Meal = {
@@ -257,15 +258,28 @@ const REVEIL_REPOS: Meal = {
   ],
 };
 
+const DINER_REPOS: Meal = {
+  name: 'Dîner — ≈ 19 h - 19 h 30',
+  detail: '120 g de protéine (ou 4 œufs) + 100 g de féculent (cuit) + 150 g de légumes + 10 g d’huile',
+  kcal: 464,
+  proteinG: 39,
+  items: [
+    ligne('r.diner.viande', 'viande', 120),
+    ligne('r.diner.feculent', 'feculent', 100),
+    ligne('r.diner.legumes', 'legumes', 150),
+    ligne('r.diner.huile', 'huile', 10),
+  ],
+};
+
 const REST: NutritionTarget = {
   kind: 'rest',
   label: 'Jour de repos',
-  kcal: 2275,
-  proteinG: 176,
-  carbsG: 245,
-  fatG: 67,
-  note: 'Mêmes cinq prises, mêmes protéines : seul le pain du matin baisse. Ce n’est pas un jour de privation.',
-  meals: [REVEIL_REPOS, AVANT_COUPURE, MIDI, AUTOUR_SEANCE, DINER],
+  kcal: 2210,
+  proteinG: 174,
+  carbsG: 230,
+  fatG: 66,
+  note: 'Mêmes cinq prises, mêmes protéines : seuls le pain du matin et le féculent du soir baissent. Ce n’est pas un jour de privation.',
+  meals: [REVEIL_REPOS, AVANT_COUPURE, MIDI, AUTOUR_SEANCE, DINER_REPOS],
 };
 
 export const NUTRITION_TARGETS: Record<DayKind, NutritionTarget> = {
