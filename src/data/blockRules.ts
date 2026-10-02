@@ -12,6 +12,7 @@
 import {
   autoreg,
   reps,
+  textLoad,
   rpeRange,
   type Block,
   type DayIndex,
@@ -226,7 +227,34 @@ export interface ContrastSpec {
 
 export const CONTRAST_BY_DAY: Partial<Record<DayIndex, ContrastSpec>> = {};
 
-export const BLOCK_RULES: BlockRuleSet[] = [...MAXFORCE, ...POWER];
+/**
+ * Semaines allégées (S4, S8) — c'est là que se découvre le squat barre : la
+ * charge est faible, la fatigue aussi, et le geste est filmé pour le coach
+ * avant le passage au squat barre chargé en semaine 5.
+ */
+const DELOAD: BlockRuleSet[] = [
+  {
+    block: 'deload',
+    day: 0,
+    rules: [
+      {
+        op: 'insert',
+        after: 'goblet-squat',
+        slot: {
+          exId: 'back-squat',
+          sets: 2,
+          work: reps(8),
+          load: textLoad('barre seule'),
+          targetRPE: null,
+          restSec: 90,
+          note: 'Technique du squat barre, sans aucun disque, dans le rack. Filme une série pour ton coach.',
+        },
+      },
+    ],
+  },
+];
+
+export const BLOCK_RULES: BlockRuleSet[] = [...DELOAD, ...MAXFORCE, ...POWER];
 
 /** Règles applicables à une séance donnée. */
 export function rulesFor(block: Block, day: DayIndex): SlotRule[] {

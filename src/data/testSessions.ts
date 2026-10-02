@@ -23,7 +23,6 @@ import {
   noLoad,
   reps,
   rpe,
-  textLoad,
   autoreg,
   type DayIndex,
   type RampStep,
@@ -97,7 +96,7 @@ const BILAN0_JEUDI: SessionBlueprint = {
   warmup: 'lower',
   readinessTest: false,
   notes: [
-    'Deuxième partie : séance technique, très légère. Le but est d’apprendre les gestes, pas de forcer.',
+    'Deuxième partie : technique très légère du Goblet Squat et du RDL haltères. Le but est d’apprendre les gestes, pas de forcer.',
     'Dimanche : repos ou marche de 30 à 45 min. La semaine 1 commence lundi.',
   ],
   slots: [
@@ -120,15 +119,6 @@ const BILAN0_JEUDI: SessionBlueprint = {
       targetRPE: rpe(6),
       restSec: 90,
       note: 'Technique : léger.',
-    },
-    {
-      exId: 'back-squat',
-      sets: 2,
-      work: reps(8),
-      load: textLoad('barre à vide'),
-      targetRPE: null,
-      restSec: 90,
-      note: 'Découverte du geste, barre seule, dans le rack.',
     },
   ],
 };

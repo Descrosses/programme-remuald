@@ -113,6 +113,23 @@ describe('profil débutant', () => {
   });
 });
 
+describe('découverte du squat barre', () => {
+  it('pas de squat barre au bilan initial : un seul squat par séance, le Goblet', () => {
+    for (const day of WEEK_DAYS[0]) {
+      const ids = getSession(0, day, CTX)!.exercises.map((e) => e.id);
+      expect(ids, `S0 jour ${day}`).not.toContain('back-squat');
+    }
+  });
+
+  it('semaine 4 : 2 × 8 barre seule après le Goblet, pour filmer le geste avant la semaine 5', () => {
+    const ids = getSession(4, 0, CTX)!.exercises.map((e) => e.id);
+    expect(ids.indexOf('back-squat')).toBe(ids.indexOf('goblet-squat') + 1);
+    const squat = getSession(4, 0, CTX)!.exercises.find((e) => e.id === 'back-squat')!;
+    expect(squat.sets).toBe(2);
+    expect(squat.loadLine).toContain('barre seule');
+  });
+});
+
 describe('tractions lestées → tirage vertical', () => {
   it('le tirage vertical est présent chaque mardi, jamais de tractions lestées', () => {
     expect(EXERCISES['weighted-pullup']).toBeUndefined();

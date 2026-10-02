@@ -17,7 +17,7 @@ Consignes permanentes :
 |---|---|---|---|
 | 0 | Bilan initial | Charges pour 5 ou 8 reps à RPE 8, mesures | Vélo 10 min |
 | 1-3 | Apprentissage | 3 séries, RPE 7, technique avant tout | Zone 2, 25 min après chaque séance |
-| 4 | Deload | 2 séries, −20 %, RPE ≤ 6 | Zone 2 seulement |
+| 4 | Deload | 2 séries, −20 %, RPE ≤ 6 ; découverte du squat barre (2 × 8 barre seule, filmé) | Zone 2 seulement |
 | 5-7 | Force + muscle | Principaux 4 × 5-6, RPE 7,5-8 ; squat barre si technique validée | Zone 2 30 min, fractionné 6 × (20 s / 100 s) le dimanche |
 | 8 | Deload + bilan intermédiaire | Lundi, mardi allégés ; bilan jeudi et dimanche | Retest vélo |
 | 9-11 | Muscle + densité | Principaux 4 × 6-8, accessoires 3-4 × 10-12, repos 60-90 s | Zone 2 40 min |
