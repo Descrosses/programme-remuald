@@ -53,7 +53,18 @@ export function useAppUpdate(): AppUpdate {
   return {
     ready,
     offlineReady,
-    update: () => void updateFn?.(),
+    update: () => {
+      /*
+       * Sur iPhone, l'appui pouvait ne rien faire : le nouveau service worker
+       * s'active, mais l'événement qui déclenche le rechargement n'arrive pas
+       * toujours dans une appli installée sur l'écran d'accueil. On recharge
+       * donc nous-mêmes dès que le nouveau service worker prend la main, et
+       * au plus tard après 2 s, quoi qu'il arrive.
+       */
+      navigator.serviceWorker?.addEventListener('controllerchange', () => window.location.reload());
+      void updateFn?.();
+      window.setTimeout(() => window.location.reload(), 2000);
+    },
     dismiss: () => setReady(false),
   };
 }
