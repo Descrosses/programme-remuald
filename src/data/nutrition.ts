@@ -178,29 +178,31 @@ const REVEIL: Meal = {
  */
 const AVANT_COUPURE: Meal = {
   name: 'Avant 8 h 15',
-  detail: '250 g de skyr + 40 g de flocons d’avoine + 1 pomme, préparés la veille dans un bocal',
-  kcal: 390,
-  proteinG: 30,
+  detail: '200 g de skyr + 40 g de flocons d’avoine + 1 pomme, préparés la veille dans un bocal',
+  kcal: 358,
+  proteinG: 25,
   items: [
-    ligne('x.avant815.skyr', 'skyr', 250),
+    ligne('x.avant815.skyr', 'skyr', 200),
     ligne('x.avant815.flocons', 'flocons', 40),
     ligne('x.avant815.pomme', 'pomme', 1),
   ],
 };
 
+/*
+ * Midi et dîner : identiques aux deux paliers depuis l'ajustement du coach
+ * (féculents réduits, plus de pain ni de confiture à midi). Seul le pain du
+ * petit-déjeuner distingue encore le jour de repos.
+ */
 const MIDI: Meal = {
   name: 'Entre 11 h 45 et 13 h 15',
-  detail:
-    '180 g de protéine + 300 g de féculent (cuit) + 250 g de légumes + 10 g d’huile, puis 1 tranche de pain + 15 g de miel',
-  kcal: 979,
-  proteinG: 67,
+  detail: '180 g de protéine + 180 g de féculent (cuit) + 150 g de légumes + 10 g d’huile',
+  kcal: 666,
+  proteinG: 58,
   items: [
-    ligne('t.midi.viande', 'viande', 180),
-    ligne('t.midi.feculent', 'feculent', 300),
-    ligne('t.midi.legumes', 'legumes', 250),
-    ligne('t.midi.huile', 'huile', 10),
-    ligne('t.midi.pain', 'pain', 35),
-    ligne('t.midi.miel', 'miel', 15),
+    ligne('x.midi.viande', 'viande', 180),
+    ligne('x.midi.feculent', 'feculent', 180),
+    ligne('x.midi.legumes', 'legumes', 150),
+    ligne('x.midi.huile', 'huile', 10),
   ],
 };
 
@@ -215,24 +217,24 @@ const AUTOUR_SEANCE: Meal = {
 
 const DINER: Meal = {
   name: 'Dîner — ≈ 19 h - 19 h 30',
-  detail: '120 g de protéine (ou 4 œufs) + 200 g de féculent (cuit) + 300 g de légumes + 10 g d’huile',
-  kcal: 634,
-  proteinG: 45,
+  detail: '120 g de protéine (ou 4 œufs) + 150 g de féculent (cuit) + 150 g de légumes + 10 g d’huile',
+  kcal: 527,
+  proteinG: 41,
   items: [
-    ligne('t.diner.viande', 'viande', 120),
-    ligne('t.diner.feculent', 'feculent', 200),
-    ligne('t.diner.legumes', 'legumes', 300),
-    ligne('t.diner.huile', 'huile', 10),
+    ligne('x.diner.viande', 'viande', 120),
+    ligne('x.diner.feculent', 'feculent', 150),
+    ligne('x.diner.legumes', 'legumes', 150),
+    ligne('x.diner.huile', 'huile', 10),
   ],
 };
 
 const TRAIN: NutritionTarget = {
   kind: 'train',
   label: 'Jour d’entraînement',
-  kcal: 2800,
-  proteinG: 195,
-  carbsG: 345,
-  fatG: 70,
+  kcal: 2350,
+  proteinG: 180,
+  carbsG: 260,
+  fatG: 68,
   note: 'Le repas de midi est ton vrai repas d’avant-séance : ne le saute jamais. Dimanche (séance à 10 h) : mêmes aliments, petit-déjeuner 2 h avant.',
   meals: [REVEIL, AVANT_COUPURE, MIDI, AUTOUR_SEANCE, DINER],
 };
@@ -240,8 +242,7 @@ const TRAIN: NutritionTarget = {
 // ---------------------------------------------------------------------------
 // Jour de repos (mercredi, vendredi, samedi)
 //
-// Mêmes cinq prises, mêmes protéines : on retire seulement des féculents et le
-// dessert sucré de midi, c'est la dépense de la séance qui disparaît.
+// Mêmes cinq prises, mêmes protéines : seul le pain du petit-déjeuner baisse.
 // ---------------------------------------------------------------------------
 
 const REVEIL_REPOS: Meal = {
@@ -256,41 +257,15 @@ const REVEIL_REPOS: Meal = {
   ],
 };
 
-const MIDI_REPOS: Meal = {
-  name: 'Entre 11 h 45 et 13 h 15',
-  detail: '180 g de protéine + 200 g de féculent (cuit) + 250 g de légumes + 10 g d’huile',
-  kcal: 721,
-  proteinG: 61,
-  items: [
-    ligne('r.midi.viande', 'viande', 180),
-    ligne('r.midi.feculent', 'feculent', 200),
-    ligne('r.midi.legumes', 'legumes', 250),
-    ligne('r.midi.huile', 'huile', 10),
-  ],
-};
-
-const DINER_REPOS: Meal = {
-  name: 'Dîner — ≈ 19 h - 19 h 30',
-  detail: '120 g de protéine (ou 4 œufs) + 100 g de féculent (cuit) + 300 g de légumes + 10 g d’huile',
-  kcal: 509,
-  proteinG: 42,
-  items: [
-    ligne('r.diner.viande', 'viande', 120),
-    ligne('r.diner.feculent', 'feculent', 100),
-    ligne('r.diner.legumes', 'legumes', 300),
-    ligne('r.diner.huile', 'huile', 10),
-  ],
-};
-
 const REST: NutritionTarget = {
   kind: 'rest',
   label: 'Jour de repos',
-  kcal: 2350,
-  proteinG: 185,
-  carbsG: 250,
+  kcal: 2275,
+  proteinG: 176,
+  carbsG: 245,
   fatG: 67,
-  note: 'Mêmes cinq prises, mêmes protéines : seuls les féculents baissent. Ce n’est pas un jour de privation.',
-  meals: [REVEIL_REPOS, AVANT_COUPURE, MIDI_REPOS, AUTOUR_SEANCE, DINER_REPOS],
+  note: 'Mêmes cinq prises, mêmes protéines : seul le pain du matin baisse. Ce n’est pas un jour de privation.',
+  meals: [REVEIL_REPOS, AVANT_COUPURE, MIDI, AUTOUR_SEANCE, DINER],
 };
 
 export const NUTRITION_TARGETS: Record<DayKind, NutritionTarget> = {

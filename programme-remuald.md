@@ -59,10 +59,10 @@ Poids (moyenne de 3 matins à jeun), tour de taille, photos · Presse à cuisses
 
 | | Jour d'entraînement | Jour de repos |
 |---|---|---|
-| Calories | ≈ 2 800 kcal | ≈ 2 350 kcal |
-| Protéines | ≈ 195 g | ≈ 185 g |
+| Calories | ≈ 2 350 kcal | ≈ 2 275 kcal |
+| Protéines | ≈ 180 g | ≈ 176 g |
 
 5 prises, calées sur les coupures du chantier (rien entre 8 h 15 - 11 h 45 ni entre 13 h 15 - 15 h 45) :
-au lever · avant 8 h 15 · entre 11 h 45 et 13 h 15 (vrai repas d'avant-séance) · banane dès 15 h 45, whey après la séance · dîner vers 19 h.
+au lever · avant 8 h 15 (200 g de skyr, flocons, pomme) · entre 11 h 45 et 13 h 15 (180 g de protéine, 180 g de féculent, 150 g de légumes) · banane dès 15 h 45, whey après la séance · dîner vers 19 h (120 g de protéine, 150 g de féculent, 150 g de légumes).
 
 Suivi : moyenne de poids sur 7 jours. Stable 3 semaines → −50 g de féculent au dîner. Perte de plus de 1,1 kg par semaine 2 semaines de suite → +50 g.
