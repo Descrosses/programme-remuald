@@ -5,7 +5,7 @@
  * elle doit être lisible à un mètre, téléphone posé sur un banc.
  */
 
-import type { Reps, Work } from '../data/types';
+import type { GripKind, Reps, Work } from '../data/types';
 import type { ResolvedLoad } from './loadResolver';
 
 /** 97.5 → « 97,5 ». Le programme est en français. */
@@ -68,6 +68,38 @@ export function loadLabel(load: ResolvedLoad): string {
       return `2 × ${fr(load.kg)} kg`;
     default:
       return `${fr(load.kg)} kg`;
+  }
+}
+
+/**
+ * Combien d'haltères, et comment — dit avant de se baisser vers le rack.
+ *
+ * Deux portés du programme se ressemblent à l'écran — marcher avec des
+ * haltères — et rien ne les distinguait au moment où ça compte, c'est-à-dire
+ * en attrapant la charge : le Suitcase Carry du jeudi se fait à UNE haltère,
+ * le Farmer Carry du dimanche à deux. L’erreur a déjà été faite sur l’appli dont
+ * celle-ci est issue.
+ *
+ * Le rappel est DÉDUIT de la forme de charge, jamais écrit exercice par
+ * exercice : `dbPair` veut dire deux haltères, `dbSingle` une seule. Un
+ * mouvement à une haltère ne peut donc pas oublier son rappel, et corriger la
+ * formulation la corrige partout.
+ *
+ * Un exercice peut quand même le dire lui-même, via `grip`, quand sa prise ne
+ * se déduit pas de sa charge : le Goblet Squat est chargé comme une paire
+ * — c'est ainsi que sa charge s'arrondit — mais se tient à deux mains sur une
+ * seule haltère.
+ */
+export function gripHint(load: ResolvedLoad, grip?: GripKind): string | null {
+  switch (grip ?? load.shape) {
+    case 'dbPair':
+      return '2 haltères — une dans chaque main';
+    case 'dbSingle':
+      return '1 SEULE haltère — un côté à la fois';
+    case 'dbBothHands':
+      return '1 haltère tenue à DEUX mains, contre la poitrine';
+    default:
+      return null;
   }
 }
 

@@ -87,6 +87,9 @@
   background: var(--surface);
   border-top: 1px solid var(--line);
   padding-bottom: env(safe-area-inset-bottom, 0px);
+  /* Même correctif que la barre de chrono : iOS ancre le `fixed` au layout
+     viewport, pas au visible. Vaut 0 partout ailleurs. */
+  transform: translateY(var(--vv-offset, 0px));
 }
 
 .tab {

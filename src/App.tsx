@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useState, type CSSProperties } from 'react';
 import { RestBar } from './components/RestBar';
 import type { DayIndex, WeekIndex } from './data/types';
 import { CombineScreen } from './screens/CombineScreen';
@@ -12,6 +12,7 @@ import { useAppUpdate } from './state/useAppUpdate';
 import { useRestTimer } from './state/useRestTimer';
 import { useRoute, type Route } from './state/useRoute';
 import { weekForTab, writeLastWeek } from './state/lastWeek';
+import { useViewportOffset } from './state/useViewportOffset';
 import { locateToday } from './engine/calendar';
 import type { DayKind } from './data/nutrition';
 import { getSettingsRow } from './db/repo';
@@ -84,8 +85,19 @@ export function App() {
   // le pouce navigue dedans, et une barre de plus multiplierait les appuis ratés.
   const inSession = route.name === 'session';
 
+  /*
+   * Sur iOS, un élément en `position: fixed` est ancré au layout viewport, pas
+   * à ce qu'on voit. Pendant le défilement, la barre de chrono remontait donc
+   * au milieu de l'écran. On publie l'écart ici, une seule fois, et les deux
+   * barres du bas s'en servent. Il vaut 0 partout ailleurs.
+   */
+  const vvOffset = useViewportOffset();
+
   return (
-    <div className={inSession ? styles.app : `${styles.app} ${styles.withNav}`}>
+    <div
+      className={inSession ? styles.app : `${styles.app} ${styles.withNav}`}
+      style={{ '--vv-offset': `${vvOffset}px` } as CSSProperties}
+    >
       {appUpdate.ready && (
         <div className={styles.updateBar} role="status">
           <span>Nouvelle version disponible.</span>

@@ -22,6 +22,9 @@ const LIST: ExerciseDef[] = [
     fn: 'squat',
     role: 'main',
     measure: 'kg',
+    /* Une seule haltère, tenue à deux mains : ni une paire, ni un côté à la
+       fois. Le rappel de prise ne peut pas se déduire de la charge ici. */
+    grip: 'dbBothHands',
     intent:
       'Haltère tenu contre la poitrine. Descente contrôlée 3 s, genoux dans l’axe des pieds, remontée avec intention.',
     cues: [

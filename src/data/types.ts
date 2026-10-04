@@ -255,7 +255,23 @@ export interface ExerciseDef {
   measure?: 'cm' | 'kg' | 'reps' | 'm' | 's';
   /** Présent si l'exercice est piloté par le tableau §9 (ou la ligne RDL). */
   liftId?: MainLiftId;
+  /**
+   * Comment la charge se tient, quand la forme de charge ne suffit pas à le
+   * dire.
+   *
+   * Le rappel affiché sous la ligne de charge est normalement DÉDUIT de
+   * `LoadSpec` : `dbPair` veut dire une haltère dans chaque main, `dbSingle`
+   * un côté à la fois. Le Goblet Squat prend une seule haltère tenue à deux
+   * mains contre la poitrine, ce qui n'est ni l'un ni l'autre — et il est
+   * chargé en `dbPair` parce que c'est ainsi que sa charge s'arrondit. Sans ce
+   * champ, il annoncerait « une dans chaque main », exactement l'erreur que le
+   * rappel existe pour éviter.
+   */
+  grip?: GripKind;
 }
+
+/** Les trois façons de tenir des haltères dans ce programme. */
+export type GripKind = 'dbPair' | 'dbSingle' | 'dbBothHands';
 
 /** Un exercice tel qu'il apparaît réellement dans une séance donnée. */
 export interface Exercise extends ExerciseDef {

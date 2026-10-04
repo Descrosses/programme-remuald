@@ -44,6 +44,34 @@ export type FoodUnit = 'g' | 'ml' | 'unité';
  * modifiée à sa ligne. Renommer un libellé est sans conséquence, renommer un id
  * ferait silencieusement oublier une modification.
  */
+/**
+ * Dans quel état l'aliment est PESÉ.
+ *
+ * Un riz cru à 350 kcal et un riz cuit à 130 ne sont pas le même aliment : les
+ * confondre triple l'apport compté. L'état est donc porté par l'aliment, et dit
+ * à l'écran au moment du choix — c'est là qu'une confusion se joue.
+ *
+ * « na » quand la question ne veut rien dire : un œuf, une pomme, de l'huile.
+ */
+export type ReferenceState = 'cru' | 'cuit' | 'na';
+
+/**
+ * Famille d'aliment — sert à ranger la liste de choix d'un remplacement.
+ *
+ * On cherche presque toujours dans la famille de ce qu'on remplace : du poulet
+ * par du poisson, pas par du riz. La famille est donc l'entrée par défaut de la
+ * recherche, avant même de taper quoi que ce soit.
+ */
+export type FoodCategory =
+  | 'proteine'
+  | 'feculent'
+  | 'legumineuse'
+  | 'legume'
+  | 'fruit'
+  | 'laitier'
+  | 'gras'
+  | 'autre';
+
 export interface FoodItem {
   id: string;
   /** Le produit dont cette ligne sert une quantité. Porte la composition. */
@@ -60,6 +88,10 @@ export interface FoodItem {
   fatG: number;
   /** Précision pratique affichée à la saisie. */
   hint?: string;
+  /** Dans quel état il est pesé — vient du produit. */
+  referenceState: ReferenceState;
+  /** Famille, pour proposer d'abord les bons remplacements. */
+  category: FoodCategory;
 }
 
 export interface Meal {
@@ -105,7 +137,7 @@ export interface NutritionTarget {
 // pain du plan ; changer une quantité ne touche que la ligne ouverte.
 // ---------------------------------------------------------------------------
 
-interface FoodProduct {
+export interface FoodProduct {
   label: string;
   unit: FoodUnit;
   /** 100 pour ce qui se pèse, 1 pour ce qui se compte. */
@@ -116,23 +148,27 @@ interface FoodProduct {
   fatG: number;
   /** Précision pratique affichée à la saisie : « poids cuit », « la tranche »… */
   hint?: string;
+  /** Dans quel état il est pesé — dit au moment du choix d'un remplacement. */
+  referenceState: ReferenceState;
+  /** Famille, pour ranger la liste de choix d'un remplacement. */
+  category: FoodCategory;
 }
 
-const PRODUITS = {
-  oeuf: { label: 'Œuf entier', unit: 'unité', per: 1, kcal: 71.5, proteinG: 6.3, carbsG: 0.35, fatG: 4.95, hint: 'Un œuf moyen, environ 50 g.' },
-  pain: { label: 'Pain complet', unit: 'g', per: 100, kcal: 250, proteinG: 9, carbsG: 43, fatG: 3.3, hint: 'Une tranche pèse environ 35 g.' },
-  miel: { label: 'Miel ou confiture', unit: 'g', per: 100, kcal: 300, proteinG: 0.3, carbsG: 82, fatG: 0 },
-  banane: { label: 'Banane', unit: 'unité', per: 1, kcal: 107, proteinG: 1.3, carbsG: 27.6, fatG: 0.4, hint: 'Une banane moyenne, environ 120 g épluchée.' },
-  pomme: { label: 'Pomme', unit: 'unité', per: 1, kcal: 80, proteinG: 0.5, carbsG: 21.5, fatG: 0.3, hint: 'Une pomme moyenne, environ 155 g.' },
-  flocons: { label: 'Flocons d’avoine', unit: 'g', per: 100, kcal: 380, proteinG: 13, carbsG: 60, fatG: 7 },
-  lait: { label: 'Lait demi-écrémé', unit: 'ml', per: 100, kcal: 46, proteinG: 3.3, carbsG: 4.8, fatG: 1.6 },
-  skyr: { label: 'Skyr nature', unit: 'g', per: 100, kcal: 63, proteinG: 9.8, carbsG: 4, fatG: 0.2 },
-  amandes: { label: 'Amandes', unit: 'g', per: 100, kcal: 580, proteinG: 21, carbsG: 10, fatG: 50 },
-  viande: { label: 'Viande ou poisson', unit: 'g', per: 100, kcal: 170, proteinG: 27, carbsG: 0, fatG: 7, hint: 'Poulet, dinde, bœuf 5 %, poisson — pesé cuit.' },
-  feculent: { label: 'Féculent', unit: 'g', per: 100, kcal: 125, proteinG: 3.5, carbsG: 26, fatG: 0.5, hint: 'Riz, pâtes, pommes de terre — pesé CUIT.' },
-  legumes: { label: 'Légumes', unit: 'g', per: 100, kcal: 30, proteinG: 2, carbsG: 5, fatG: 0.3 },
-  huile: { label: 'Huile d’olive ou de colza', unit: 'g', per: 100, kcal: 900, proteinG: 0, carbsG: 0, fatG: 100 },
-  whey: { label: 'Whey', unit: 'g', per: 100, kcal: 400, proteinG: 80, carbsG: 8, fatG: 5 },
+export const PRODUITS = {
+  oeuf: { label: 'Œuf entier', unit: 'unité', per: 1, kcal: 71.5, proteinG: 6.3, carbsG: 0.35, fatG: 4.95, hint: 'Un œuf moyen, environ 50 g.', referenceState: 'na', category: 'proteine' },
+  pain: { label: 'Pain complet', unit: 'g', per: 100, kcal: 250, proteinG: 9, carbsG: 43, fatG: 3.3, hint: 'Une tranche pèse environ 35 g.', referenceState: 'na', category: 'feculent' },
+  miel: { label: 'Miel ou confiture', unit: 'g', per: 100, kcal: 300, proteinG: 0.3, carbsG: 82, fatG: 0, referenceState: 'na', category: 'autre' },
+  banane: { label: 'Banane', unit: 'unité', per: 1, kcal: 107, proteinG: 1.3, carbsG: 27.6, fatG: 0.4, hint: 'Une banane moyenne, environ 120 g épluchée.', referenceState: 'na', category: 'fruit' },
+  pomme: { label: 'Pomme', unit: 'unité', per: 1, kcal: 80, proteinG: 0.5, carbsG: 21.5, fatG: 0.3, hint: 'Une pomme moyenne, environ 155 g.', referenceState: 'na', category: 'fruit' },
+  flocons: { label: 'Flocons d’avoine', unit: 'g', per: 100, kcal: 380, proteinG: 13, carbsG: 60, fatG: 7, referenceState: 'cru', category: 'feculent' },
+  lait: { label: 'Lait demi-écrémé', unit: 'ml', per: 100, kcal: 46, proteinG: 3.3, carbsG: 4.8, fatG: 1.6, referenceState: 'na', category: 'laitier' },
+  skyr: { label: 'Skyr nature', unit: 'g', per: 100, kcal: 63, proteinG: 9.8, carbsG: 4, fatG: 0.2, referenceState: 'na', category: 'laitier' },
+  amandes: { label: 'Amandes', unit: 'g', per: 100, kcal: 580, proteinG: 21, carbsG: 10, fatG: 50, referenceState: 'na', category: 'gras' },
+  viande: { label: 'Viande ou poisson', unit: 'g', per: 100, kcal: 170, proteinG: 27, carbsG: 0, fatG: 7, hint: 'Poulet, dinde, bœuf 5 %, poisson — pesé cuit.', referenceState: 'cuit', category: 'proteine' },
+  feculent: { label: 'Féculent', unit: 'g', per: 100, kcal: 125, proteinG: 3.5, carbsG: 26, fatG: 0.5, hint: 'Riz, pâtes, pommes de terre — pesé CUIT.', referenceState: 'cuit', category: 'feculent' },
+  legumes: { label: 'Légumes', unit: 'g', per: 100, kcal: 30, proteinG: 2, carbsG: 5, fatG: 0.3, referenceState: 'na', category: 'legume' },
+  huile: { label: 'Huile d’olive ou de colza', unit: 'g', per: 100, kcal: 900, proteinG: 0, carbsG: 0, fatG: 100, referenceState: 'na', category: 'gras' },
+  whey: { label: 'Whey', unit: 'g', per: 100, kcal: 400, proteinG: 80, carbsG: 8, fatG: 5, referenceState: 'na', category: 'proteine' },
 } as const satisfies Record<string, FoodProduct>;
 
 export type ProductId = keyof typeof PRODUITS;
