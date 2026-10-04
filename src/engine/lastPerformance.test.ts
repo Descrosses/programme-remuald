@@ -260,3 +260,91 @@ describe('un mouvement qui revient deux fois dans la semaine', () => {
     expect(p.delta).toBe('+10 cm');
   });
 });
+
+/**
+ * Les portés suivent DEUX variables, et les deux progressent.
+ *
+ * Le Suitcase Carry se fait à 32 kg sur 30 m, puis à 32 kg sur 40 m : la
+ * distance a monté, la charge non. N'afficher que la charge — ce que faisait
+ * l'ancienne version — revenait à dire « Semaine 1 · 32 kg » et à effacer la
+ * seule chose qui avait changé.
+ */
+describe('les portés — distance ET charge', () => {
+  const SAM = 5 as DayIndex;
+
+  /** Une occurrence de porté : les deux métriques à la fois. */
+  const porte = (week: number, m: number, k: number): Occurrence => ({
+    exerciseId: 'suitcase-carry',
+    week,
+    day: SAM,
+    kg: k,
+    plannedKg: null,
+    rpe: null,
+    failed: false,
+    targetRPE: null,
+    completed: true,
+    measure: m,
+  });
+
+  const carry = (occ: Occurrence[], week: number) =>
+    lastPerformance(occ, {
+      exerciseId: 'suitcase-carry',
+      measureUnit: 'm',
+      before: { week, day: SAM },
+    });
+
+  it('affiche les deux valeurs, distance d’abord', () => {
+    // L'ordre des champs de saisie juste en dessous, et celui dans lequel un
+    // porté se décrit : « 40 m à 32 kg ».
+    expect(carry([porte(1, 40, 32)], 2)!.value).toBe('40 m · 32 kg');
+  });
+
+  it('la distance qui monte à charge égale est une progression', () => {
+    const p = carry([porte(1, 30, 32), porte(2, 40, 32)], 3)!;
+    expect(p.value).toBe('40 m · 32 kg');
+    expect(p.trend).toBe('up');
+    expect(p.delta).toBe('+10 m');
+  });
+
+  it('la charge qui monte à distance égale aussi', () => {
+    const p = carry([porte(1, 30, 32), porte(2, 30, 34)], 3)!;
+    expect(p.trend).toBe('up');
+    expect(p.delta).toBe('+2 kg');
+  });
+
+  it('les deux qui montent : les deux écarts sont dits', () => {
+    const p = carry([porte(1, 30, 32), porte(2, 40, 34)], 3)!;
+    expect(p.trend).toBe('up');
+    expect(p.delta).toBe('+10 m · +2 kg');
+  });
+
+  /*
+   * Plus loin mais moins lourd : ce n'est ni une progression ni un recul, c'est
+   * un arbitrage. La flèche se tait et les deux écarts sont affichés — c'est à
+   * Guillaume de juger, pas à une couleur.
+   */
+  it('l’une monte, l’autre descend : neutre, et les deux sont dits', () => {
+    const p = carry([porte(1, 30, 34), porte(2, 40, 32)], 3)!;
+    expect(p.trend).toBe('flat');
+    expect(p.delta).toBe('+10 m · −2 kg');
+  });
+
+  it('rien ne bouge : aucun écart', () => {
+    const p = carry([porte(1, 30, 32), porte(2, 30, 32)], 3)!;
+    expect(p.trend).toBe('flat');
+    expect(p.delta).toBeNull();
+  });
+
+  it('un deload sur les deux reste neutre, jamais un échec', () => {
+    const p = carry([porte(3, 40, 34), porte(4, 20, 30)], 5)!;
+    expect(p.trend).toBe('down');
+    expect(p.delta).toBe('−20 m · −4 kg');
+  });
+
+  it('les mouvements à une seule métrique ne changent pas', () => {
+    // Garde-fou : la nouvelle logique ne doit rien ajouter là où il n'y a
+    // qu'une variable.
+    expect(squat([kg(1, 77.5, 7), kg(2, 82.5, 7.5)], 3)!.value).toBe('82,5 kg');
+    expect(saut([mes(1, 230), mes(2, 238)], 3)!.value).toBe('238 cm');
+  });
+});

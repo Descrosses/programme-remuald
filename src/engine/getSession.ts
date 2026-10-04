@@ -78,6 +78,20 @@ export interface ResolvedExercise {
    * le .md ne doit pas se voir attribuer un chiffre qu'il n'écrit pas.
    */
   lastKg: number | null;
+  /**
+   * Dernière mesure réellement enregistrée sur ce mouvement — distance d'un
+   * porté, temps d'une planche.
+   *
+   * Pendant du `lastKg`, et pour la même raison : le champ de saisie doit
+   * s'ouvrir sur quelque chose de plausible. Il démarrait au minimum du
+   * curseur, donc valider un porté sans y toucher enregistrait 0 m au lieu
+   * des 20 ou 25 m du plan.
+   *
+   * On ne passe PAS par `lastCompleted` : ce champ vaut `false` sur un
+   * mouvement mesuré, qui n'enregistre pas de reps. On prend la dernière
+   * occurrence qui porte une mesure.
+   */
+  lastMeasure: number | null;
   /** §11 — proposition de charge, à accepter ou refuser. Jamais appliquée seule. */
   suggestion: ProgressionResult | null;
   adjustments: Adjustment[];
@@ -383,6 +397,8 @@ function resolveSlot(slot: Slot, o: ResolveOpts): ResolvedExercise | null {
     restSec: slot.restSec,
     loadLine: formatLoadLine(sets, work, load),
     lastKg: lastCompleted(o.ctx.history[def.id] ?? [])?.kg ?? null,
+    lastMeasure:
+      [...(o.ctx.history[def.id] ?? [])].reverse().find((h) => h.measure != null)?.measure ?? null,
     notes,
     ...(contrastWith && o.contrast ? { contrast: o.contrast } : {}),
     ...(slot.ramp ? { ramp: slot.ramp } : {}),
