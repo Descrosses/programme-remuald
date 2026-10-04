@@ -16,6 +16,7 @@
 
 import type { ResolvedExercise } from './getSession';
 import type { LoadShape } from './loadResolver';
+import { parseNombre } from './numberEntry';
 
 /** Bornes et précision de la saisie, communes au clavier et aux boutons. */
 export const KG_MIN = 0;
@@ -82,12 +83,5 @@ export function loadEntryFor(ex: ResolvedExercise, saved?: number | null): LoadE
  * envoie une virgule, un collage depuis ailleurs envoie souvent un point.
  */
 export function parseKg(raw: string, previous: number | null): number | null {
-  const nettoye = raw.trim().replace(',', '.').replace(/\s/g, '');
-  if (nettoye === '') return previous;
-  if (!/^\d*\.?\d*$/.test(nettoye)) return previous;
-  const n = Number(nettoye);
-  if (!Number.isFinite(n)) return previous;
-  if (n < KG_MIN || n > KG_MAX) return previous;
-  const facteur = 10 ** KG_DECIMALES;
-  return Math.round(n * facteur) / facteur;
+  return parseNombre(raw, previous, { min: KG_MIN, max: KG_MAX, decimales: KG_DECIMALES });
 }
