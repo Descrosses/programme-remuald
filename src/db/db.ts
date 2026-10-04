@@ -242,6 +242,7 @@ export class ProgrammeDB extends Dexie {
   exerciseVideoLog!: Table<ExerciseVideoLogRow, number>;
   exerciseNotes!: Table<ExerciseNoteRow, number>;
   settings!: Table<SettingsRow, number>;
+  customFoods!: Table<CustomFoodRow, number>;
 
   constructor() {
     super('programme-remuald');
@@ -403,6 +404,23 @@ export class ProgrammeDB extends Dexie {
     this.version(9).stores({
       exerciseNotes: '++id, &[exerciseId+week+day], exerciseId, [exerciseId+week], date',
     });
+
+    /*
+     * v10 — aliments personnalisés. Ajout pur, une table de plus : aucune ligne
+     * existante n'est lue ni modifiée.
+     *
+     * `&foodId` est unique — un aliment saisi deux fois sous le même nom
+     * corrige le premier au lieu d'en créer un doublon dans la liste de choix.
+     *
+     * `addedAt` est indexé parce qu'on trie dessus : Dexie lève une
+     * `SchemaError` sur un `orderBy` d'un champ qui n'est pas un index, et
+     * l'erreur ne dit pas lequel.
+     *
+     * Le champ `productId` des remplacements, lui, n'a demandé AUCUNE
+     * migration : Dexie stocke l'objet entier et seuls les index sont au
+     * schéma. Une ligne écrite avant la v10 n'a simplement pas ce champ.
+     */
+    this.version(10).stores({ customFoods: '++id, &foodId, category, addedAt' });
   }
 }
 
@@ -420,6 +438,38 @@ export interface FoodOverrideRow {
   proteinG?: number;
   carbsG?: number;
   fatG?: number;
+  /**
+   * Remplacement : l'aliment réellement mangé à la place de celui du plan.
+   *
+   * Aucune migration n'a été nécessaire pour ce champ — Dexie stocke l'objet
+   * entier, et seuls les index figurent au schéma. Les lignes écrites avant
+   * n'ont simplement pas ce champ, ce qui veut dire « pas de remplacement ».
+   */
+  productId?: string;
+}
+
+/**
+ * Un aliment saisi à la main, réutilisable dans n'importe quel repas.
+ *
+ * Même forme qu'un aliment de la bibliothèque, à `isCustom` près : c'est ce qui
+ * permet au remplacement de les traiter indifféremment. Le jour où l'un d'eux
+ * mérite d'entrer dans la bibliothèque livrée, il suffit de le recopier.
+ */
+export interface CustomFoodRow {
+  id?: number;
+  /** Identifiant stable, préfixé « custom. » pour ne jamais heurter la bibliothèque. */
+  foodId: string;
+  label: string;
+  unit: 'g' | 'ml' | 'unité';
+  per: number;
+  kcal: number;
+  proteinG: number;
+  carbsG: number;
+  fatG: number;
+  referenceState: 'cru' | 'cuit' | 'na';
+  category: string;
+  /** `YYYY-MM-DD` de création, pour trier les plus récents en tête. */
+  addedAt: string;
 }
 
 /** Premier lundi à partir d'une date incluse — conversion d'ancre de la v5. */

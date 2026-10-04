@@ -919,3 +919,103 @@
   background: var(--surface-2);
   color: var(--rouge);
 }
+
+/* --- Remplacer un aliment -------------------------------------------------- */
+
+/*
+ * Feuille de choix, posée dans le flux sous la ligne ouverte plutôt qu'en
+ * surimpression : l'écran Nutrition est déjà une longue liste, et une modale
+ * qui recouvre tout ferait perdre de vue l'aliment qu'on est en train de
+ * remplacer.
+ */
+.sheet {
+  margin-top: 12px;
+  padding: 12px;
+  border: 1px solid var(--accent);
+  border-radius: var(--radius-sm);
+  background: var(--surface-2);
+}
+
+.sheetHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.sheetTitle {
+  margin: 0;
+  font-size: 0.95rem;
+  font-weight: 700;
+}
+
+.sheetClose {
+  flex: none;
+  width: var(--tap);
+  height: var(--tap);
+  min-width: 0;
+  border-radius: var(--radius-sm);
+  background: var(--surface-3);
+  font-size: 1.4rem;
+  line-height: 1;
+}
+
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 10px 0;
+}
+
+.chip {
+  min-height: 36px;
+  min-width: 0;
+  padding: 0 10px;
+  border-radius: 999px;
+  background: var(--surface-3);
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--ink-2);
+}
+
+.chipOn {
+  background: var(--accent);
+  color: var(--ink-on-accent);
+}
+
+.foodChoices {
+  max-height: 46vh;
+  margin: 0 0 10px;
+  padding: 0;
+  overflow-y: auto;
+  list-style: none;
+}
+
+.foodChoice {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  width: 100%;
+  padding: 10px 8px;
+  border-bottom: 1px solid var(--line);
+  text-align: left;
+}
+
+.foodChoiceName {
+  font-weight: 600;
+}
+
+.foodChoiceMacros {
+  flex: none;
+  font-size: 0.78rem;
+  color: var(--ink-3);
+}
+
+/* « cuit » / « cru » sur la ligne : discret, mais toujours là. */
+.foodState {
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: var(--ink-3);
+}

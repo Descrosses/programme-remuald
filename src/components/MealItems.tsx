@@ -1,5 +1,7 @@
 import { useState } from 'react';
 import { linesForProduct, type FoodItem, type Meal } from '../data/nutrition';
+import { stateLabel, type LibraryFood } from '../data/foodLibrary';
+import { FoodSwapSheet } from './FoodSwapSheet';
 import {
   CLE_COMPOSITION,
   CLE_QUANTITE,
@@ -10,6 +12,7 @@ import {
   macroCoherence,
   macrosLookWrong,
   type FoodOverride,
+  type Catalogue,
   type FoodOverrides,
 } from '../engine/nutrition';
 import styles from '../screens/Screens.module.css';
@@ -37,13 +40,21 @@ const fr = (n: number) => n.toLocaleString('fr-FR', { maximumFractionDigits: 1 }
 export function MealItems({
   meal,
   overrides,
+  customs,
+  catalogue,
   onSave,
   onReset,
+  onCreateCustom,
 }: {
   meal: Meal;
   overrides: FoodOverrides;
+  /** Les aliments saisis à la main, proposés au remplacement. */
+  customs: LibraryFood[];
+  /** La bibliothèque plus les aliments saisis — le même pour tout l'écran. */
+  catalogue: Catalogue;
   onSave: (cle: string, patch: FoodOverride) => Promise<void>;
   onReset: (cle: string) => Promise<void>;
+  onCreateCustom: (food: LibraryFood) => Promise<void>;
 }) {
   const [open, setOpen] = useState<string | null>(null);
   if (!meal.items) return null;
@@ -55,10 +66,13 @@ export function MealItems({
           key={item.id}
           item={item}
           overrides={overrides}
+          customs={customs}
+          catalogue={catalogue}
           open={open === item.id}
           onToggle={() => setOpen((v) => (v === item.id ? null : item.id))}
           onSave={onSave}
           onReset={onReset}
+          onCreateCustom={onCreateCustom}
         />
       ))}
     </ul>
@@ -68,21 +82,27 @@ export function MealItems({
 function FoodLine({
   item,
   overrides,
+  customs,
+  catalogue,
   open,
   onToggle,
   onSave,
   onReset,
+  onCreateCustom,
 }: {
   item: FoodItem;
   overrides: FoodOverrides;
+  customs: LibraryFood[];
+  catalogue: Catalogue;
   open: boolean;
   onToggle: () => void;
   onSave: (cle: string, patch: FoodOverride) => Promise<void>;
   onReset: (cle: string) => Promise<void>;
+  onCreateCustom: (food: LibraryFood) => Promise<void>;
 }) {
-  const courant = effectiveItem(item, overrides);
-  const macros = itemMacros(item, overrides);
-  const modifie = isEdited(item, overrides);
+  const courant = effectiveItem(item, overrides, catalogue);
+  const macros = itemMacros(item, overrides, catalogue);
+  const modifie = isEdited(item, overrides, catalogue);
 
   /*
    * Le brouillon est en texte, pas en nombre : pendant la frappe un champ passe
@@ -90,6 +110,21 @@ function FoodLine({
    * réécrirait sous le doigt. La conversion a lieu à l'enregistrement.
    */
   const [draft, setDraft] = useState(() => champsDe(courant));
+  const [remplacement, setRemplacement] = useState(false);
+
+  /*
+   * Le remplacement se range sous la clé de la LIGNE, à côté de la quantité :
+   * remplacer le féculent du midi ne doit pas toucher celui du dîner.
+   *
+   * La quantité n'est pas réécrite ici — `effectiveItem` la conserve, ou repart
+   * d'une valeur plausible si l'unité change (180 g de viande ne font pas
+   * 180 bananes).
+   */
+  async function remplacer(productId: string) {
+    await onSave(CLE_QUANTITE(item), { productId });
+    setRemplacement(false);
+    setDraft(champsDe({ ...courant, qty: courant.qty }));
+  }
 
   function ouvrir() {
     setDraft(champsDe(courant));
@@ -120,7 +155,16 @@ function FoodLine({
     onToggle();
   }
 
-  const autresLignes = linesForProduct(item.product).length - 1;
+  /*
+   * Tout ce qui décrit l'aliment affiché vient de `courant`, c'est-à-dire de
+   * l'aliment RÉELLEMENT mangé. Après un remplacement, la ligne doit dire
+   * « Saumon » et non « Viande ou poisson » avec les macros du saumon — ce
+   * qu'elle faisait, parce qu'elle lisait `item`, l'aliment du plan.
+   *
+   * Seul le rappel « D'origine… », en bas, garde `item` : c'est sa raison
+   * d'être.
+   */
+  const autresLignes = linesForProduct(courant.product).length - 1;
 
   /*
    * Contrôle en direct pendant la saisie : les kcal tapées doivent valoir ce que
@@ -138,14 +182,14 @@ function FoodLine({
   const incoherent =
     coherence !== null && Math.abs(coherence.ecartPct) > MACRO_COHERENCE_TOLERANCE_PCT;
   const ligneDouteuse = macrosLookWrong(item, overrides);
-  const unite = item.unit === 'unité' ? (courant.qty > 1 ? 'unités' : 'unité') : item.unit;
-  const base = item.per === 1 ? 'par unité' : 'pour 100 g';
+  const unite = courant.unit === 'unité' ? (courant.qty > 1 ? 'unités' : 'unité') : courant.unit;
+  const base = courant.per === 1 ? 'par unité' : 'pour 100 g';
 
   return (
     <li className={styles.foodItem}>
       <button type="button" className={styles.foodRow} onClick={ouvrir} aria-expanded={open}>
         <span className={styles.foodName}>
-          {item.label}
+          {courant.label}
           {modifie && (
             <span className={styles.foodBadge} title="Valeur modifiée">
               modifié
@@ -162,6 +206,11 @@ function FoodLine({
         </span>
         <span className={`${styles.foodQty} tnum`}>
           {fr(courant.qty)} {unite}
+          {/* « cuit » / « cru » dit sur la ligne elle-même : c'est là qu'on
+              pèse, et là qu'une confusion coûte le triple des calories. */}
+          {stateLabel(courant.referenceState) && (
+            <span className={styles.foodState}> {stateLabel(courant.referenceState)}</span>
+          )}
         </span>
         <span className={`${styles.foodKcal} tnum`}>{Math.round(macros.kcal)} kcal</span>
       </button>
@@ -172,18 +221,27 @@ function FoodLine({
             Recopie l’étiquette de ton produit. Les macros sont <b>{base}</b>, la quantité est à
             part — comme sur l’emballage.
           </p>
-          {item.hint && (
+          {courant.hint && (
             <p className={styles.fieldHint} style={{ margin: '0 0 10px' }}>
-              {item.hint}
+              {courant.hint}
             </p>
           )}
           {autresLignes > 0 && (
             <p className={styles.fieldHint} style={{ margin: '0 0 10px' }}>
-              La composition vaut pour <b>toutes les lignes « {item.label} » du plan</b> ({autresLignes}{' '}
+              La composition vaut pour <b>toutes les lignes « {courant.label} » du plan</b> ({autresLignes}{' '}
               autre{autresLignes > 1 ? 's' : ''}) — une étiquette se recopie une seule fois. La
               quantité, elle, ne concerne que cette ligne.
             </p>
           )}
+          <button
+            type="button"
+            className={styles.secondary}
+            style={{ marginBottom: 12 }}
+            onClick={() => setRemplacement(true)}
+          >
+            ↔ Remplacer cet aliment
+          </button>
+
           <div className={styles.foodGrid}>
             {CHAMPS.map((c) => (
               <label key={c.cle} className={styles.foodField}>
@@ -210,7 +268,7 @@ function FoodLine({
               valent <b>{Math.round(coherence.attendues)} kcal</b> {base}, pas{' '}
               {fr(brouillon.kcal)}. Sur une étiquette, les kcal sont toujours 4 × protéines
               + 4 × glucides + 9 × lipides. Recopie les quatre nombres de la même colonne, celle
-              {item.per === 1 ? ' de la portion' : ' des 100 g'}.
+              {courant.per === 1 ? ' de la portion' : ' des 100 g'}.
             </p>
           )}
           <div className={styles.foodActions}>
@@ -235,11 +293,22 @@ function FoodLine({
           </div>
           {modifie && (
             <p className={styles.fieldHint}>
-              D’origine : {fr(item.qty)} {item.unit === 'unité' ? 'unité' : item.unit} · {fr(item.kcal)}{' '}
-              kcal · {fr(item.proteinG)} P · {fr(item.carbsG)} G · {fr(item.fatG)} L ({base}).
+              D’origine : {item.label}, {fr(item.qty)}{' '}
+              {item.unit === 'unité' ? 'unité' : item.unit} · {fr(item.kcal)} kcal ·{' '}
+              {fr(item.proteinG)} P · {fr(item.carbsG)} G · {fr(item.fatG)} L ({base}).
             </p>
           )}
         </div>
+      )}
+
+      {remplacement && (
+        <FoodSwapSheet
+          item={courant}
+          customs={customs}
+          onPick={(id) => void remplacer(id)}
+          onCreate={(f) => void onCreateCustom(f)}
+          onClose={() => setRemplacement(false)}
+        />
       )}
     </li>
   );

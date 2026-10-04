@@ -20,6 +20,7 @@ import {
   type Meal,
   type NutritionTarget,
 } from '../data/nutrition';
+import { FOOD_LIBRARY } from '../data/foodLibrary';
 import type { DayIndex } from '../data/types';
 
 /** Une pesée du matin, et éventuellement le tour de taille du jour. */
@@ -276,6 +277,20 @@ export interface FoodOverride {
   proteinG?: number;
   carbsG?: number;
   fatG?: number;
+  /**
+   * Remplacement : l'identifiant de l'aliment réellement mangé à la place de
+   * celui du plan.
+   *
+   * Rangé sous la clé de la LIGNE, jamais sous celle du produit. Remplacer le
+   * féculent du midi par du riz ne doit pas changer celui du dîner — sinon on
+   * ne pourrait plus manger du riz à midi et des pâtes le soir, qui est
+   * exactement ce qu'on cherche à permettre.
+   *
+   * Le plan du .md n'est jamais réécrit : il reste ce qui était prévu, et cette
+   * ligne dit ce qui a été mangé. C'est aussi ce qui rend le retour en arrière
+   * possible.
+   */
+  productId?: string;
 }
 
 /** Valeurs modifiées, rangées par identifiant d'aliment. */
@@ -300,18 +315,81 @@ export interface Macros {
  * Tout mettre sous une seule clé donnait le choix entre retaper une étiquette
  * quatre fois et voir une quantité se propager là où elle n'a rien à faire.
  */
-export function effectiveItem(item: FoodItem, overrides: FoodOverrides = {}): FoodItem {
+export function effectiveItem(
+  item: FoodItem,
+  overrides: FoodOverrides = {},
+  library: Catalogue = FOOD_LIBRARY,
+): FoodItem {
   const surLigne = overrides[item.id];
-  const surProduit = overrides[item.product];
-  if (!surLigne && !surProduit) return item;
+
+  /*
+   * Le remplacement se résout EN PREMIER : tout ce qui suit parle de l'aliment
+   * réellement mangé, pas de celui du plan. Sa composition se corrige donc sous
+   * SA clé à lui — recopier l'étiquette du saumon ne doit pas atterrir sous
+   * « Viande ou poisson ».
+   */
+  const remplacant = surLigne?.productId ? library[surLigne.productId] : undefined;
+  const base: FoodItem = remplacant
+    ? {
+        ...item,
+        product: surLigne!.productId!,
+        label: remplacant.label,
+        unit: remplacant.unit,
+        per: remplacant.per,
+        kcal: remplacant.kcal,
+        proteinG: remplacant.proteinG,
+        carbsG: remplacant.carbsG,
+        fatG: remplacant.fatG,
+        referenceState: remplacant.referenceState,
+        category: remplacant.category,
+        ...(remplacant.hint !== undefined ? { hint: remplacant.hint } : {}),
+        qty: quantiteApresRemplacement(item, remplacant),
+      }
+    : item;
+
+  const surProduit = overrides[base.product];
+  if (!surLigne && !surProduit) return base;
   return {
-    ...item,
-    qty: surLigne?.qty ?? item.qty,
-    kcal: surProduit?.kcal ?? item.kcal,
-    proteinG: surProduit?.proteinG ?? item.proteinG,
-    carbsG: surProduit?.carbsG ?? item.carbsG,
-    fatG: surProduit?.fatG ?? item.fatG,
+    ...base,
+    qty: surLigne?.qty ?? base.qty,
+    kcal: surProduit?.kcal ?? base.kcal,
+    proteinG: surProduit?.proteinG ?? base.proteinG,
+    carbsG: surProduit?.carbsG ?? base.carbsG,
+    fatG: surProduit?.fatG ?? base.fatG,
   };
+}
+
+/** Un catalogue d'aliments consultable par identifiant. */
+export type Catalogue = Record<string, FoodLike>;
+
+/** Ce dont le remplacement a besoin : une composition, une unité, un état. */
+export interface FoodLike {
+  label: string;
+  unit: FoodItem['unit'];
+  per: number;
+  kcal: number;
+  proteinG: number;
+  carbsG: number;
+  fatG: number;
+  referenceState: FoodItem['referenceState'];
+  category: FoodItem['category'];
+  hint?: string;
+}
+
+/**
+ * La quantité à proposer après un remplacement.
+ *
+ * On garde la quantité de la portion remplacée — 180 g de viande deviennent
+ * 180 g de saumon — SAUF si l'unité change. Remplacer 180 g de viande par une
+ * banane donnerait sinon 180 bananes : l'unité passe de « g » à « unité », et
+ * le nombre ne veut plus rien dire.
+ *
+ * Dans ce cas on repart d'une valeur plausible — 1 pour ce qui se compte,
+ * 100 pour ce qui se pèse — à ajuster ensuite.
+ */
+export function quantiteApresRemplacement(ancien: FoodItem, nouveau: FoodLike): number {
+  if (ancien.unit === nouveau.unit) return ancien.qty;
+  return nouveau.unit === 'unité' ? 1 : 100;
 }
 
 /** Les deux clés sous lesquelles se range une correction de cette ligne. */
@@ -319,9 +397,14 @@ export const CLE_QUANTITE = (item: FoodItem): string => item.id;
 export const CLE_COMPOSITION = (item: FoodItem): string => item.product;
 
 /** Cet aliment est-il modifié par rapport au .md ? */
-export function isEdited(item: FoodItem, overrides: FoodOverrides = {}): boolean {
-  const e = effectiveItem(item, overrides);
+export function isEdited(
+  item: FoodItem,
+  overrides: FoodOverrides = {},
+  library: Catalogue = FOOD_LIBRARY,
+): boolean {
+  const e = effectiveItem(item, overrides, library);
   return (
+    e.product !== item.product || // remplacé par un autre aliment
     e.qty !== item.qty ||
     e.kcal !== item.kcal ||
     e.proteinG !== item.proteinG ||
@@ -334,8 +417,12 @@ export function isEdited(item: FoodItem, overrides: FoodOverrides = {}): boolean
  * Ce qu'apporte une ligne d'aliment. Non arrondi : arrondir ici puis
  * additionner ferait dériver le total du repas de plusieurs kcal.
  */
-export function itemMacros(item: FoodItem, overrides: FoodOverrides = {}): Macros {
-  const e = effectiveItem(item, overrides);
+export function itemMacros(
+  item: FoodItem,
+  overrides: FoodOverrides = {},
+  library: Catalogue = FOOD_LIBRARY,
+): Macros {
+  const e = effectiveItem(item, overrides, library);
   const f = e.qty / e.per;
   return { kcal: e.kcal * f, proteinG: e.proteinG * f, carbsG: e.carbsG * f, fatG: e.fatG * f };
 }
@@ -362,11 +449,17 @@ const arrondir = (m: Macros): Macros => ({
  * garde les valeurs écrites du .md : glucides et lipides sont alors inconnus,
  * et valent 0 plutôt qu'un chiffre inventé.
  */
-export function mealMacros(meal: Meal, overrides: FoodOverrides = {}): Macros {
+export function mealMacros(
+  meal: Meal,
+  overrides: FoodOverrides = {},
+  library: Catalogue = FOOD_LIBRARY,
+): Macros {
   if (!meal.items) {
     return { kcal: meal.kcal, proteinG: meal.proteinG, carbsG: 0, fatG: 0 };
   }
-  return arrondir(meal.items.reduce((acc, i) => somme(acc, itemMacros(i, overrides)), ZERO));
+  return arrondir(
+    meal.items.reduce((acc, i) => somme(acc, itemMacros(i, overrides, library)), ZERO),
+  );
 }
 
 /**
@@ -383,9 +476,21 @@ export function mealMacros(meal: Meal, overrides: FoodOverrides = {}): Macros {
 export function mealsTotal(
   target: NutritionTarget,
   overrides: FoodOverrides = {},
-): { kcal: number; proteinG: number } {
-  const t = target.meals.reduce((acc, m) => somme(acc, mealMacros(m, overrides)), ZERO);
-  return { kcal: Math.round(t.kcal), proteinG: Math.round(t.proteinG) };
+  library: Catalogue = FOOD_LIBRARY,
+): Macros {
+  /*
+   * On somme les repas DÉJÀ arrondis, et non les aliments bruts : c'est ce
+   * qu'on lit à l'écran, repas par repas. Sommer les valeurs brutes donnerait
+   * un total juste au centième mais différent de l'addition des lignes
+   * affichées — et c'est l'addition visible qui doit tomber juste.
+   *
+   * Les quatre macros sont cumulées, pas seulement les kcal et les protéines :
+   * les glucides et les lipides n'étaient calculés qu'au niveau du repas, donc
+   * la journée ne pouvait pas les afficher autrement qu'en les écrivant à part.
+   */
+  return arrondir(
+    target.meals.reduce((acc, m) => somme(acc, mealMacros(m, overrides, library)), ZERO),
+  );
 }
 
 /**
@@ -406,8 +511,9 @@ export function gapVerdict(
   target: NutritionTarget,
   overrides: FoodOverrides = {},
   tolerancePct = MEALS_GAP_TOLERANCE_PCT,
+  library: Catalogue = FOOD_LIBRARY,
 ): GapVerdict {
-  const { pct } = mealsGap(target, overrides);
+  const { pct } = mealsGap(target, overrides, library);
   if (pct < -tolerancePct) return 'deficit';
   if (pct > tolerancePct) return 'surplus';
   return 'ok';
@@ -417,8 +523,9 @@ export function gapVerdict(
 export function mealsGap(
   target: NutritionTarget,
   overrides: FoodOverrides = {},
+  library: Catalogue = FOOD_LIBRARY,
 ): { kcal: number; pct: number } {
-  const kcal = mealsTotal(target, overrides).kcal - target.kcal;
+  const kcal = mealsTotal(target, overrides, library).kcal - target.kcal;
   return { kcal, pct: Math.round((kcal / target.kcal) * 1000) / 10 };
 }
 
