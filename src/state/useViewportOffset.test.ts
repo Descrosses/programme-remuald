@@ -48,7 +48,7 @@ describe('quand il n’y a rien à corriger', () => {
   });
 });
 
-describe('le cas de Guillaume — la barre remontée au milieu de l’écran', () => {
+describe('la barre remontée au milieu de l’écran', () => {
   /*
    * Pendant le défilement, iOS raccourcit le visible et le décale vers le bas.
    * Le bas du visible tombe alors AVANT le bas du layout, et une barre ancrée
@@ -59,7 +59,7 @@ describe('le cas de Guillaume — la barre remontée au milieu de l’écran', (
     expect(offset).toBe(-100);
   });
 
-  it('le visible décalé vers le bas : la barre suit', () => {
+  it('le visible décalé vers le bas : la barre suit, vers le haut', () => {
     // offsetTop 60 + hauteur 784 = 844 : le bas coïncide, rien à décaler.
     expect(offsetBasViewport({ offsetTop: 60, visualHeight: 784, layoutHeight: 844 })).toBe(0);
     // offsetTop 60 + hauteur 744 = 804 : il manque 40 px.
@@ -68,6 +68,41 @@ describe('le cas de Guillaume — la barre remontée au milieu de l’écran', (
 
   it('le décalage est rendu en pixels entiers', () => {
     expect(offsetBasViewport({ offsetTop: 0, visualHeight: 800.6, layoutHeight: 844 })).toBe(-43);
+  });
+});
+
+describe('la barre ne descend JAMAIS — la régression du 4 octobre', () => {
+  /*
+   * Constaté sur iPhone, sur l'appli dont celle-ci est issue : la barre
+   * d'onglets était poussée vers le bas, ses libellés passés sous le bord de
+   * l'écran.
+   *
+   * La cause est une supposition fausse du premier correctif : que l'écart
+   * pouvait utilement aller dans les deux sens. Il ne le peut pas. La barre est
+   * ancrée au BAS du layout viewport ; la descendre encore ne peut que la
+   * glisser hors de l'écran, sous l'indicateur d'accueil. Avec
+   * `viewport-fit=cover` et une barre d'état translucide, le visible déborde
+   * durablement le layout vers le bas, donc l'écart restait positif — et la
+   * barre restait enfoncée, même page immobile.
+   *
+   * Un décalage positif ne corrige donc rien, jamais. On l'ignore.
+   */
+  it('le visible déborde vers le bas : on ne bouge pas', () => {
+    expect(offsetBasViewport({ offsetTop: 0, visualHeight: 884, layoutHeight: 844 })).toBe(0);
+  });
+
+  it('même pour un gros débordement', () => {
+    expect(offsetBasViewport({ offsetTop: 60, visualHeight: 844, layoutHeight: 844 })).toBe(0);
+  });
+
+  it('aucune mesure ne peut faire descendre la barre', () => {
+    // Balayage large : le résultat est toujours négatif ou nul.
+    for (let top = 0; top <= 120; top += 20) {
+      for (let h = 300; h <= 1000; h += 50) {
+        const o = offsetBasViewport({ offsetTop: top, visualHeight: h, layoutHeight: 844 });
+        expect(o, `top ${top}, h ${h}`).toBeLessThanOrEqual(0);
+      }
+    }
   });
 });
 
