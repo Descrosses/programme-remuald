@@ -61,3 +61,12 @@ Deux parades sont en place :
 2. **Horodatage de fin** — le chrono ne décompte pas, il compare à une heure de
    fin stockée. Même si l'appli est tuée puis relancée, le temps affiché au
    retour est juste.
+
+## Parenté avec `programme-12-semaines`
+
+Cette appli est née d'une copie de `programme-12-semaines` : même moteur, mêmes
+écrans, autre athlète et autre programme. Les améliorations de l'une se
+reportent donc sur l'autre, mais jamais les données.
+
+`SYNC.md` dit où passe la frontière, quels fichiers ne doivent jamais traverser,
+et comment mesurer ce qui a divergé entre les deux dépôts.
