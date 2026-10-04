@@ -15,6 +15,8 @@
      navigation, c'est la navigation qui s'en charge. */
   padding: 10px var(--pad) var(--rest-pad-bottom, 10px);
   box-shadow: 0 -8px 24px rgb(0 0 0 / 45%);
+  /* iOS ancre le `fixed` au layout viewport : on recolle au visible. 0 ailleurs. */
+  transform: translateY(var(--vv-offset, 0px));
 }
 
 .bar.over {
