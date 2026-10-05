@@ -46,11 +46,20 @@ export interface MesuresViewport {
 export const DECALAGE_MAX_PX = 400;
 
 /**
- * De combien décaler une barre ancrée en bas pour qu'elle touche le bas de ce
+ * De combien REMONTER une barre ancrée en bas pour qu'elle touche le bas de ce
  * qui est visible.
  *
- * Négatif = la barre doit remonter (le visible s'arrête avant le bas du
- * layout). Positif = elle doit descendre.
+ * Toujours négatif ou nul, et c'est le point important.
+ *
+ * La première version rendait aussi des valeurs positives, en supposant qu'un
+ * visible débordant vers le bas demandait de descendre la barre. C'est faux :
+ * la barre est déjà ancrée au bas du layout viewport, la descendre encore ne
+ * peut que la pousser hors de l'écran. Sur iPhone, avec `viewport-fit=cover`
+ * et une barre d'état translucide, l'écart restait positif en permanence — et
+ * les libellés des onglets passaient sous le bord de l'écran, page immobile.
+ * Constaté sur l'appli dont celle-ci est issue, qui porte le même code.
+ *
+ * Un décalage vers le bas ne corrige donc rien, jamais. On l'ignore.
  */
 export function offsetBasViewport(m: MesuresViewport): number {
   const valeurs = [m.offsetTop, m.visualHeight, m.layoutHeight];
@@ -58,9 +67,11 @@ export function offsetBasViewport(m: MesuresViewport): number {
   if (m.visualHeight <= 0 || m.layoutHeight <= 0) return 0;
 
   const ecart = m.offsetTop + m.visualHeight - m.layoutHeight;
+  // Le visible déborde vers le bas : rien à corriger, et rien à casser.
+  if (ecart > 0) return 0;
   // Sous le pixel, le décalage ne se voit pas et ferait vibrer la barre.
-  if (Math.abs(ecart) < 1) return 0;
-  if (Math.abs(ecart) > DECALAGE_MAX_PX) return 0;
+  if (-ecart < 1) return 0;
+  if (-ecart > DECALAGE_MAX_PX) return 0;
   return Math.round(ecart);
 }
 
