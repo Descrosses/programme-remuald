@@ -19,6 +19,7 @@ const LIST: ExerciseDef[] = [
   {
     id: 'goblet-squat',
     name: 'Goblet Squat',
+    techniqueImage: 'goblet-squat.webp',
     fn: 'squat',
     role: 'main',
     measure: 'kg',
@@ -49,6 +50,7 @@ const LIST: ExerciseDef[] = [
   {
     id: 'leg-press',
     name: 'Presse à cuisses',
+    techniqueImage: 'leg-press.webp',
     fn: 'squat',
     role: 'accessory',
     measure: 'kg',
@@ -57,6 +59,7 @@ const LIST: ExerciseDef[] = [
   {
     id: 'db-rdl',
     name: 'RDL haltères',
+    techniqueImage: 'rdl-dumbbells.webp',
     fn: 'hinge',
     role: 'accessory',
     measure: 'kg',
@@ -83,6 +86,7 @@ const LIST: ExerciseDef[] = [
   {
     id: 'dead-bug',
     name: 'Dead Bug',
+    techniqueImage: 'dead-bug.webp',
     fn: 'core',
     role: 'core',
     intent: 'Bas du dos plaqué au sol. Bras et jambe opposés s’allongent lentement, souffle expiré.',
@@ -101,6 +105,7 @@ const LIST: ExerciseDef[] = [
   {
     id: 'bench-press',
     name: 'Développé couché barre',
+    techniqueImage: 'bench-press.webp',
     fn: 'push',
     role: 'main',
     measure: 'kg',
@@ -110,6 +115,7 @@ const LIST: ExerciseDef[] = [
   {
     id: 'lat-pulldown',
     name: 'Tirage vertical',
+    techniqueImage: 'lat-pulldown.webp',
     fn: 'pull',
     role: 'main',
     measure: 'kg',
@@ -120,6 +126,7 @@ const LIST: ExerciseDef[] = [
   {
     id: 'chest-supported-row',
     name: 'Rowing haltères buste appuyé',
+    techniqueImage: 'chest-supported-dumbbell-row.webp',
     fn: 'pull',
     role: 'accessory',
     measure: 'kg',
@@ -128,6 +135,7 @@ const LIST: ExerciseDef[] = [
   {
     id: 'db-shoulder-press',
     name: 'Développé épaules haltères assis',
+    techniqueImage: 'seated-dumbbell-shoulder-press.webp',
     fn: 'push',
     role: 'accessory',
     measure: 'kg',
@@ -136,6 +144,7 @@ const LIST: ExerciseDef[] = [
   {
     id: 'face-pull',
     name: 'Face Pull',
+    techniqueImage: 'face-pull.webp',
     fn: 'pull',
     role: 'accessory',
     intent: 'Léger. Non négociable — robustesse des épaules.',
@@ -143,6 +152,7 @@ const LIST: ExerciseDef[] = [
   {
     id: 'cable-external-rotation',
     name: 'Rotation externe câble',
+    techniqueImage: 'cable-external-rotation.webp',
     fn: 'pull',
     role: 'accessory',
     intent: 'Léger. Non négociable.',
@@ -159,6 +169,7 @@ const LIST: ExerciseDef[] = [
   {
     id: 'hip-thrust',
     name: 'Hip Thrust',
+    techniqueImage: 'hip-thrust.webp',
     fn: 'hinge',
     role: 'main',
     measure: 'kg',
@@ -168,6 +179,7 @@ const LIST: ExerciseDef[] = [
   {
     id: 'rdl',
     name: 'RDL barre',
+    techniqueImage: 'barbell-rdl.webp',
     fn: 'hinge',
     role: 'main',
     measure: 'kg',
@@ -178,14 +190,33 @@ const LIST: ExerciseDef[] = [
   {
     id: 'single-leg-press',
     name: 'Presse à cuisses unilatérale',
+    techniqueImage: 'single-leg-press.webp',
     fn: 'squat',
     role: 'accessory',
     measure: 'kg',
     intent: 'Une jambe à la fois, genou dans l’axe, amplitude contrôlée.',
   },
   {
+    /*
+     * Remplace le Leg Curl assis du jeudi (correction du coach) : c'est bien la
+     * machine à quadriceps. Nouvel identifiant plutôt que renommage : un id est
+     * la clé de l'historique, et un Leg Curl déjà saisi ne doit pas devenir un
+     * Leg Extension dans les courbes.
+     */
+    id: 'leg-extension',
+    name: 'Leg Extension',
+    techniqueImage: 'leg-extension.webp',
+    fn: 'squat',
+    role: 'accessory',
+    measure: 'kg',
+    intent: 'Descente lente en 3 s.',
+  },
+  {
+    // Plus programmé depuis le remplacement par le Leg Extension. Conservé pour
+    // que l'historique éventuel garde son nom.
     id: 'seated-leg-curl',
     name: 'Leg Curl assis',
+    techniqueImage: 'seated-leg-curl.webp',
     fn: 'hinge',
     role: 'accessory',
     measure: 'kg',
@@ -194,6 +225,7 @@ const LIST: ExerciseDef[] = [
   {
     id: 'adductor-machine',
     name: 'Adducteurs machine',
+    techniqueImage: 'adductor-machine.webp',
     fn: 'squat',
     role: 'accessory',
     measure: 'kg',
@@ -202,6 +234,7 @@ const LIST: ExerciseDef[] = [
   {
     id: 'suitcase-carry',
     name: 'Suitcase Carry',
+    techniqueImage: 'suitcase-carry.webp',
     fn: 'carry',
     role: 'carry',
     measure: 'm',
@@ -210,6 +243,7 @@ const LIST: ExerciseDef[] = [
   {
     id: 'plank',
     name: 'Planche',
+    techniqueImage: 'plank.webp',
     fn: 'core',
     role: 'core',
     measure: 's',
@@ -221,6 +255,7 @@ const LIST: ExerciseDef[] = [
   {
     id: 'incline-db-press',
     name: 'Développé incliné haltères',
+    techniqueImage: 'incline-dumbbell-press.webp',
     fn: 'push',
     role: 'accessory',
     measure: 'kg',
@@ -229,6 +264,7 @@ const LIST: ExerciseDef[] = [
   {
     id: 'neutral-lat-pulldown',
     name: 'Tirage vertical prise neutre',
+    techniqueImage: 'neutral-grip-lat-pulldown.webp',
     fn: 'pull',
     role: 'accessory',
     measure: 'kg',
@@ -237,6 +273,7 @@ const LIST: ExerciseDef[] = [
   {
     id: 'one-arm-cable-row',
     name: 'Rowing poulie un bras',
+    techniqueImage: 'single-arm-cable-row.webp',
     fn: 'pull',
     role: 'accessory',
     intent: 'Épaule basse, tire le coude vers la hanche.',
@@ -244,6 +281,7 @@ const LIST: ExerciseDef[] = [
   {
     id: 'cable-chop',
     name: 'Cable Chop haut → bas',
+    techniqueImage: 'cable-chop-high-low.webp',
     fn: 'core',
     role: 'core',
     intent: 'Rapide, pivote sur les hanches.',
@@ -251,6 +289,7 @@ const LIST: ExerciseDef[] = [
   {
     id: 'knee-raise',
     name: 'Relevé de genoux (chaise romaine)',
+    techniqueImage: 'roman-chair-knee-raise.webp',
     fn: 'core',
     role: 'core',
     measure: 'reps',
@@ -259,6 +298,7 @@ const LIST: ExerciseDef[] = [
   {
     id: 'farmer-carry',
     name: 'Farmer Carry',
+    techniqueImage: 'farmer-carry.webp',
     fn: 'carry',
     role: 'carry',
     measure: 'm',
@@ -293,6 +333,7 @@ const LIST: ExerciseDef[] = [
   {
     id: 'test-leg-press-5rm',
     name: 'Presse à cuisses — 5 reps',
+    techniqueImage: 'leg-press.webp',
     fn: 'test',
     role: 'test',
     measure: 'kg',
@@ -301,6 +342,7 @@ const LIST: ExerciseDef[] = [
   {
     id: 'test-bench-5rm',
     name: 'Développé couché — 5 reps',
+    techniqueImage: 'bench-press.webp',
     fn: 'test',
     role: 'test',
     measure: 'kg',
@@ -309,6 +351,7 @@ const LIST: ExerciseDef[] = [
   {
     id: 'test-lat-pulldown-5rm',
     name: 'Tirage vertical — 5 reps',
+    techniqueImage: 'lat-pulldown.webp',
     fn: 'test',
     role: 'test',
     measure: 'kg',
@@ -325,6 +368,7 @@ const LIST: ExerciseDef[] = [
   {
     id: 'test-hip-thrust-8rm',
     name: 'Hip Thrust — 8 reps',
+    techniqueImage: 'hip-thrust.webp',
     fn: 'test',
     role: 'test',
     measure: 'kg',
@@ -333,6 +377,7 @@ const LIST: ExerciseDef[] = [
   {
     id: 'test-plank-max',
     name: 'Planche — temps max',
+    techniqueImage: 'plank.webp',
     fn: 'test',
     role: 'test',
     measure: 's',
@@ -349,6 +394,7 @@ const LIST: ExerciseDef[] = [
   {
     id: 'test-farmer-carry',
     name: 'Farmer Carry — test',
+    techniqueImage: 'farmer-carry.webp',
     fn: 'test',
     role: 'test',
     measure: 'm',

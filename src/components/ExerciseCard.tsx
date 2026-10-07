@@ -11,6 +11,8 @@ import { lastPerformance } from '../engine/lastPerformance';
 import type { Occurrence } from '../engine/types';
 import type { DayIndex } from '../data/types';
 import styles from '../screens/Session.module.css';
+import { TechniqueSheet } from './TechniqueSheet';
+import { techniqueImageFor } from '../media/techniqueImage';
 
 export interface SetPayload {
   setIndex: number;
@@ -77,6 +79,7 @@ export function ExerciseCard({
   const [manualKg, setManualKg] = useState<number>(ex.load.kg ?? 0);
 
   const plannedKg = overrideKg ?? ex.load.kg;
+  const technique = techniqueImageFor(ex.def);
   const shownLoadLine = buildLoadLine(ex, plannedKg);
   const allDone = savedSets.length >= ex.sets && ex.sets > 0;
   const suggestion = ex.suggestion;
@@ -101,6 +104,9 @@ export function ExerciseCard({
           )}
           {overrideKg !== null && <span style={{ color: 'var(--accent)' }}>charge ajustée</span>}
         </div>
+
+        {/* Fiche technique : rien tant que le fichier n'est pas déposé. */}
+        {technique && <TechniqueSheet image={technique} name={ex.name} />}
 
         {/*
           Le rappel de prise, juste sous la ligne de charge : l'endroit qu'on lit

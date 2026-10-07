@@ -92,7 +92,7 @@ describe('force + muscle (S5-7) et muscle + densité (S9-11)', () => {
   it('S9 : 4 × 6-8 sur les principaux, accessoires 3 × 10-12, zone 2 à 40 min', () => {
     const jeudi = seance(9, 3);
     expect(ex(jeudi, 'rdl')!.work).toMatchObject({ reps: { min: 6, max: 8 } });
-    expect(ex(jeudi, 'seated-leg-curl')!.work).toMatchObject({ reps: { min: 10, max: 12 } });
+    expect(ex(jeudi, 'leg-extension')!.work).toMatchObject({ reps: { min: 10, max: 12 } });
     expect(ex(jeudi, 'zone2-cardio')!.work).toEqual({ kind: 'time', seconds: 40 * 60 });
   });
 });

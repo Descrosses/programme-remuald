@@ -268,6 +268,16 @@ export interface ExerciseDef {
    * rappel existe pour éviter.
    */
   grip?: GripKind;
+  /**
+   * Nom du fichier de la fiche technique de ce mouvement, déposé dans
+   * `public/images/exercises/` (ex. « goblet-squat.webp »). Juste le nom : le
+   * chemin complet se construit à UN seul endroit (`src/media/techniqueImage.ts`).
+   *
+   * Facultatif, et sans risque : le bouton « Voir le mouvement » n'apparaît que
+   * si ce champ est rempli ET que le fichier existe réellement dans le dossier
+   * au moment du build. Une fiche pas encore déposée ne montre donc rien.
+   */
+  techniqueImage?: string;
 }
 
 /** Les trois façons de tenir des haltères dans ce programme. */

@@ -70,3 +70,18 @@ reportent donc sur l'autre, mais jamais les données.
 
 `SYNC.md` dit où passe la frontière, quels fichiers ne doivent jamais traverser,
 et comment mesurer ce qui a divergé entre les deux dépôts.
+
+## Fiches techniques des exercices
+
+Chaque exercice peut afficher sa fiche technique (« 📷 Voir le mouvement »,
+ouverte en plein écran).
+
+1. Déposer l'image dans `public/images/exercises/`, au nom indiqué par le champ
+   `techniqueImage` de l'exercice dans `src/data/exercises.ts`
+   (ex. `goblet-squat.webp`).
+2. Pousser sur `main`.
+
+Le bouton apparaît tout seul au déploiement suivant. Tant qu'un fichier manque,
+l'exercice n'affiche rien — ni bouton, ni image cassée. Les fiches sont mises
+en cache avec le reste de l'appli : elles s'ouvrent aussi sans réseau.
+

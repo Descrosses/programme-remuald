@@ -130,6 +130,38 @@ describe('découverte du squat barre', () => {
   });
 });
 
+describe('correction du coach : Leg Curl assis → Leg Extension', () => {
+  it('jeudi : Leg Extension 3 × 10, RPE 7-8, repos 1 min 30, descente lente en 3 s', () => {
+    const jeudi = getSession(1, 3, CTX)!;
+    const le = jeudi.exercises.find((e) => e.id === 'leg-extension')!;
+    expect(le.name).toBe('Leg Extension');
+    expect(le.loadLine).toBe('3 × 10');
+    expect(le.targetRPE?.label).toBe('RPE 7-8');
+    expect(le.restSec).toBe(90);
+    expect(le.def.intent).toBe('Descente lente en 3 s.');
+    expect(le.def.techniqueImage).toBe('leg-extension.webp');
+  });
+
+  it('le Leg Curl assis n’apparaît plus dans aucune séance', () => {
+    for (const { week, session } of toutes()) {
+      expect(session.exercises.map((e) => e.id), `S${week} ${session.title}`).not.toContain('seated-leg-curl');
+    }
+  });
+
+  it('il prend sa place partout où il était, y compris dans les blocs force et densité', () => {
+    for (const w of [1, 4, 5, 9] as WeekIndex[]) {
+      expect(getSession(w, 3, CTX)!.exercises.map((e) => e.id), `S${w}`).toContain('leg-extension');
+    }
+  });
+
+  it('le Leg Curl du lundi, lui, n’est pas touché', () => {
+    const lundi = getSession(1, 0, CTX)!;
+    const lc = lundi.exercises.find((e) => e.id === 'leg-curl')!;
+    expect(lc.name).toBe('Leg Curl');
+    expect(lc.loadLine).toBe('3 × 12');
+  });
+});
+
 describe('tractions lestées → tirage vertical', () => {
   it('le tirage vertical est présent chaque mardi, jamais de tractions lestées', () => {
     expect(EXERCISES['weighted-pullup']).toBeUndefined();

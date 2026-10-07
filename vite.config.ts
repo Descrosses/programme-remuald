@@ -1,6 +1,7 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import { VitePWA } from 'vite-plugin-pwa';
+import { techniqueImagesPlugin } from './scripts/techniqueImagesPlugin.mjs';
 
 /**
  * `base` : GitHub Pages sert le site sous /<nom-du-dépôt>/.
@@ -13,6 +14,7 @@ export default defineConfig({
   base,
   plugins: [
     react(),
+    techniqueImagesPlugin(),
     VitePWA({
       /*
        * `prompt` et non `autoUpdate` : une mise à jour automatique recharge la
@@ -28,7 +30,12 @@ export default defineConfig({
          * Après ça, l'appli fonctionne à 100 % hors ligne — c'est la condition
          * pour qu'elle serve en salle, où le réseau est aléatoire.
          */
-        globPatterns: ['**/*.{js,css,html,woff2,png,svg,ico}'],
+        // Les fiches techniques (webp / jpg) sont mises en cache comme le reste :
+        // elles doivent s'ouvrir en salle, sans réseau.
+        globPatterns: ['**/*.{js,css,html,woff2,png,svg,ico,webp,jpg,jpeg}'],
+        // Une fiche détaillée peut dépasser les 2 Mo par défaut de Workbox, qui
+        // l'ignorerait alors en silence.
+        maximumFileSizeToCacheInBytes: 6 * 1024 * 1024,
         navigateFallback: `${base}index.html`,
         cleanupOutdatedCaches: true,
       },

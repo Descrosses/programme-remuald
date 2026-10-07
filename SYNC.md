@@ -18,6 +18,8 @@ qui décrit :
 - `src/components/`, `src/screens/`, `src/state/`, `src/timer/`, `src/media/` ;
 - `src/db/repo.ts`, `src/db/export.ts` ;
 - `src/styles/`, `src/assets/` ;
+- `src/media/techniqueImage.ts`, `src/components/TechniqueSheet.*`,
+  `scripts/techniqueImagesPlugin.mjs` (le mécanisme des fiches techniques) ;
 - `package.json`, `tsconfig.json`, `vitest.config.ts`, `.github/workflows/`.
 
 Un fichier de cette liste qui diffère encore de celui de `programme-12-semaines`
@@ -26,6 +28,9 @@ plutôt que « Remplacer le poulet ». C'est voulu : un commentaire qui parle d'
 aliment absent du plan est un commentaire faux.
 
 ## Ce qui ne se reporte jamais
+
+**Les fiches techniques.** Les images de `public/images/exercises/` et les
+champs `techniqueImage` de `src/data/exercises.ts` sont propres à chaque appli.
 
 **Le programme lui-même.** `programme-remuald.md` est la source de vérité de
 cette appli, et `src/data/` n'en est que la transcription :

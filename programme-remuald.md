@@ -31,7 +31,7 @@ Consignes permanentes :
 
 **Mardi — Haut du corps A** : Développé couché barre 3 × 6-8 RPE 7 · Tirage vertical 3 × 8 · Rowing haltères buste appuyé 3 × 10 · Développé épaules haltères 3 × 10 · Face Pull 2 × 15 + Rotation externe 2 × 12 / côté · Pallof Press 3 × 8 / côté · Zone 2 25 min.
 
-**Jeudi — Bas du corps B (chaîne postérieure)** : Hip Thrust 3 × 10 · RDL barre 3 × 6 RPE 7 · Presse unilatérale 2 × 12 / jambe · Leg Curl assis 3 × 10 · Adducteurs 2 × 12 · Suitcase Carry 3 × 20 m / côté · Planche 3 × 30 s · Zone 2 25 min.
+**Jeudi — Bas du corps B (chaîne postérieure)** : Hip Thrust 3 × 10 · RDL barre 3 × 6 RPE 7 · Presse unilatérale 2 × 12 / jambe · Leg Extension 3 × 10 (descente lente en 3 s) · Adducteurs 2 × 12 · Suitcase Carry 3 × 20 m / côté · Planche 3 × 30 s · Zone 2 25 min.
 
 **Dimanche — Haut du corps B + tronc + cardio** : Développé incliné haltères 3 × 10 · Tirage vertical prise neutre 3 × 10 · Rowing poulie un bras 3 × 12 / côté · Cable Chop 3 × 10 / côté · Relevé de genoux 3 × 10 · Farmer Carry 4 × 25 m · Fractionné 8 × (20 s / 70 s) vélo ou rameur.
 

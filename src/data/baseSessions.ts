@@ -104,7 +104,7 @@ const JEUDI: SessionBlueprint = {
     s('hip-thrust', 3, reps(10), barre(), rpeRange(7, 8), 90),
     s('rdl', 3, reps(6), barre(), rpe(7), 150),
     s('single-leg-press', 2, reps(12, true, 'jambe'), barre(), rpe(7), 90),
-    s('seated-leg-curl', 3, reps(10), barre(), rpeRange(7, 8), 90),
+    s('leg-extension', 3, reps(10), barre(), rpeRange(7, 8), 90),
     s('adductor-machine', 2, reps(12), barre(), rpe(7), 60),
     s('suitcase-carry', 3, meters(20, true), haltere(), null, 60),
     s('plank', 3, { kind: 'time', seconds: 30 }, bodyweight(), null, 60, '3 fois 30 s.'),
