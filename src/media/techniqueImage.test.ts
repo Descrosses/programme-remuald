@@ -25,6 +25,12 @@ describe('techniqueImageFor', () => {
     expect(techniqueImageFor(GOBLET, ['leg-press.webp'])).toBeNull();
   });
 
+  it('reconnaît la fiche quelle que soit son extension (png, jpg) et sa casse', () => {
+    expect(techniqueImageFor(GOBLET, ['goblet-squat.png'])?.src).toBe(`/${TECHNIQUE_IMAGE_DIR}goblet-squat.png`);
+    expect(techniqueImageFor(GOBLET, ['Goblet-Squat.JPG'])?.src).toBe(`/${TECHNIQUE_IMAGE_DIR}Goblet-Squat.JPG`);
+    expect(techniqueImageFor(GOBLET, ['goblet-squat-v2.png'])).toBeNull();
+  });
+
   it('ne rend rien pour un exercice qui ne déclare pas de fiche', () => {
     expect(techniqueImageFor(EXERCISES['zone2-cardio']!, ['zone2-cardio.webp'])).toBeNull();
   });

@@ -33,10 +33,19 @@ export function techniqueImageFor(
   def: Pick<ExerciseDef, 'name' | 'techniqueImage'>,
   files: readonly string[] = available,
 ): TechniqueImage | null {
-  const file = def.techniqueImage;
-  if (!file || !files.includes(file)) return null;
+  if (!def.techniqueImage) return null;
+  // L'extension ne compte pas : « goblet-squat.png » ou « .jpg » déposé à la
+  // place du « .webp » annoncé est reconnu quand même. Seul le nom compte.
+  const wanted = sansExtension(def.techniqueImage);
+  const file = files.find((f) => sansExtension(f) === wanted);
+  if (!file) return null;
   return {
     src: `${import.meta.env.BASE_URL}${TECHNIQUE_IMAGE_DIR}${encodeURIComponent(file)}`,
     alt: `Fiche technique — ${def.name}`,
   };
+}
+
+/** « Goblet-Squat.WEBP » → « goblet-squat » : comparaison insensible à la casse. */
+function sansExtension(file: string): string {
+  return file.replace(/\.[^.]+$/, '').toLowerCase();
 }

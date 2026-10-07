@@ -16,7 +16,7 @@ import { join } from 'node:path';
 
 const VIRTUAL_ID = 'virtual:technique-images';
 const RESOLVED_ID = '\0' + VIRTUAL_ID;
-const EXTENSIONS = /\.(webp|jpe?g|png)$/i;
+const EXTENSIONS = /\.(webp|jpe?g|png)$/i; // insensible à la casse : .PNG accepté
 
 export function techniqueImagesPlugin(root = process.cwd()) {
   const dir = join(root, 'public', 'images', 'exercises');
