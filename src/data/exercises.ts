@@ -37,6 +37,7 @@ const LIST: ExerciseDef[] = [
   {
     id: 'back-squat',
     name: 'Squat barre',
+    techniqueImage: 'back-squat.webp',
     fn: 'squat',
     role: 'main',
     measure: 'kg',
@@ -69,6 +70,7 @@ const LIST: ExerciseDef[] = [
   {
     id: 'leg-curl',
     name: 'Leg Curl',
+    techniqueImage: 'leg-curl.webp',
     fn: 'hinge',
     role: 'accessory',
     measure: 'kg',
@@ -77,6 +79,7 @@ const LIST: ExerciseDef[] = [
   {
     id: 'step-up',
     name: 'Step-up sur banc bas',
+    techniqueImage: 'step-up.webp',
     fn: 'squat',
     role: 'accessory',
     measure: 'kg',
@@ -160,6 +163,7 @@ const LIST: ExerciseDef[] = [
   {
     id: 'pallof-press',
     name: 'Pallof Press',
+    techniqueImage: 'pallof-press.webp',
     fn: 'core',
     role: 'core',
     intent: 'Bras tendus devant toi, résiste à la rotation, tiens 2 s.',

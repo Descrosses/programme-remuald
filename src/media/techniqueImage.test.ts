@@ -54,7 +54,7 @@ describe('association exercice → fiche', () => {
     );
     expect(attendu).toEqual({
       'adductor-machine': 'adductor-machine.webp',
-      'back-squat': null,
+      'back-squat': 'back-squat.webp',
       'bench-press': 'bench-press.webp',
       'cable-chop': 'cable-chop-high-low.webp',
       'cable-external-rotation': 'cable-external-rotation.webp',
@@ -70,16 +70,16 @@ describe('association exercice → fiche', () => {
       'incline-db-press': 'incline-dumbbell-press.webp',
       'knee-raise': 'roman-chair-knee-raise.webp',
       'lat-pulldown': 'lat-pulldown.webp',
-      'leg-curl': null,
+      'leg-curl': 'leg-curl.webp',
       'leg-extension': 'leg-extension.webp',
       'leg-press': 'leg-press.webp',
       'neutral-lat-pulldown': 'neutral-grip-lat-pulldown.webp',
       'one-arm-cable-row': 'single-arm-cable-row.webp',
-      'pallof-press': null,
+      'pallof-press': 'pallof-press.webp',
       plank: 'plank.webp',
       rdl: 'barbell-rdl.webp',
       'single-leg-press': 'single-leg-press.webp',
-      'step-up': null,
+      'step-up': 'step-up.webp',
       'suitcase-carry': 'suitcase-carry.webp',
       'zone2-cardio': null,
     });
