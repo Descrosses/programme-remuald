@@ -13,7 +13,7 @@ import { useRestTimer } from './state/useRestTimer';
 import { useRoute, type Route } from './state/useRoute';
 import { weekForTab, writeLastWeek } from './state/lastWeek';
 import { useViewportOffset } from './state/useViewportOffset';
-import { locateToday } from './engine/calendar';
+import { currentWeek, locateToday } from './engine/calendar';
 import type { DayKind } from './data/nutrition';
 import { getSettingsRow } from './db/repo';
 import styles from './App.module.css';
@@ -46,6 +46,17 @@ export function App() {
    * carburant de l'écran Nutrition n'ait pas sa propre idée du planning.
    */
   const [todayDay, setTodayDay] = useState<DayIndex | null>(null);
+  /**
+   * Semaine de programme en cours, `null` hors programme.
+   *
+   * C'est elle qui dit à l'écran Nutrition dans quelle PHASE on se trouve — une
+   * semaine de deload allège les féculents des jours d'entraînement.
+   *
+   * Elle vient de `currentWeek` et non de la séance du jour : le mardi d'une
+   * semaine de deload est un jour de repos, mais on est bien encore dans cette
+   * semaine-là, et le bandeau doit le dire.
+   */
+  const [todayWeek, setTodayWeek] = useState<WeekIndex | null>(null);
   const timer = useRestTimer(alerts);
   const [route, navigate] = useRoute();
   const appUpdate = useAppUpdate();
@@ -59,6 +70,7 @@ export function App() {
       const today = locateToday(row.startDate, new Date().toISOString().slice(0, 10));
       setTodayKind(today?.kind === 'session' ? 'train' : 'rest');
       setTodayDay(today?.kind === 'session' ? today.session.day : null);
+      setTodayWeek(currentWeek(row.startDate, new Date().toISOString().slice(0, 10)));
     })();
   }, [dataVersion]);
 
@@ -111,7 +123,17 @@ export function App() {
       )}
 
       <main>
-        {renderScreen(route, dataVersion, todayKind, todayDay, openSession, navigate, refresh, timer)}
+        {renderScreen(
+          route,
+          dataVersion,
+          todayKind,
+          todayDay,
+          todayWeek,
+          openSession,
+          navigate,
+          refresh,
+          timer,
+        )}
       </main>
 
       <RestBar timer={timer} />
@@ -148,6 +170,7 @@ function renderScreen(
   dataVersion: number,
   todayKind: DayKind,
   todayDay: DayIndex | null,
+  todayWeek: WeekIndex | null,
   openSession: (week: WeekIndex, day: DayIndex) => void,
   navigate: (route: Route) => void,
   refresh: () => void,
@@ -193,6 +216,7 @@ function renderScreen(
           key={`${dataVersion}-${todayKind}`}
           todayKind={todayKind}
           todayDay={todayDay}
+          todayWeek={todayWeek}
         />
       );
 

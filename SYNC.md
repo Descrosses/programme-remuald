@@ -61,7 +61,18 @@ chose que le `.md`, donc ils sont propres à chaque programme. Ils se
 **réécrivent**, jamais ne se copient : `program.test.ts`, `getSession.test.ts`,
 `nutrition.test.ts`, `calendar.test.ts`, `readiness.test.ts`,
 `foodSwap.test.ts`, `measureEntry.test.ts`, `measureField.test.ts`,
-`historyIndex.test.ts`, `progression.test.ts`, `loadEntry.test.ts`.
+`historyIndex.test.ts`, `progression.test.ts`, `loadEntry.test.ts`,
+`nutritionPhase.test.ts`, `mealLog.test.ts`, `macroBar.test.ts`.
+
+## Dernier report (octobre 2026)
+
+Repris de `programme-12-semaines` : état cru/cuit lors d'un remplacement,
+nutrition des semaines allégées (S4, S8), barre de macros par repas, suivi du
+jour (repas cochés, kcal restantes). Côté données, Remuald garde son plan :
+`DELOAD_QUANTITIES` est **vide** — il est déjà en déficit, une semaine allégée
+ne baisse pas ses quantités ; seul le bandeau `DELOAD_BANNER` l'en informe.
+Non repris : le plan alimentaire de Guillaume (données), le test de saut
+(consigne : aucun saut).
 
 ## Voir ce qui a divergé
 

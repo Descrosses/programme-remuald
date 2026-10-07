@@ -241,8 +241,9 @@ export class ProgrammeDB extends Dexie {
   foodOverrides!: Table<FoodOverrideRow, number>;
   exerciseVideoLog!: Table<ExerciseVideoLogRow, number>;
   exerciseNotes!: Table<ExerciseNoteRow, number>;
-  settings!: Table<SettingsRow, number>;
   customFoods!: Table<CustomFoodRow, number>;
+  mealLog!: Table<MealLogRow, number>;
+  settings!: Table<SettingsRow, number>;
 
   constructor() {
     super('programme-remuald');
@@ -421,6 +422,21 @@ export class ProgrammeDB extends Dexie {
      * schéma. Une ligne écrite avant la v10 n'a simplement pas ce champ.
      */
     this.version(10).stores({ customFoods: '++id, &foodId, category, addedAt' });
+
+    /*
+     * v11 — repas réellement pris. Ajout pur, une table de plus : aucune ligne
+     * existante n'est lue ni modifiée.
+     *
+     * `&[date+mealId]` est unique : cocher puis décocher le même repas corrige
+     * la ligne au lieu d'en empiler une par appui. `date` est indexé parce
+     * qu'on relit toujours une journée entière d'un coup.
+     *
+     * Ce qui n'est PAS stocké ici : les macros. Elles se recalculent depuis le
+     * plan et les corrections de Guillaume, qui sont déjà la vérité de ce qu'il
+     * a mangé. Les figer ici en ferait une troisième copie, qui divergerait à
+     * la première étiquette recopiée.
+     */
+    this.version(11).stores({ mealLog: '++id, &[date+mealId], date' });
   }
 }
 
@@ -470,6 +486,23 @@ export interface CustomFoodRow {
   category: string;
   /** `YYYY-MM-DD` de création, pour trier les plus récents en tête. */
   addedAt: string;
+}
+
+/**
+ * Un repas coché comme pris, un jour donné.
+ *
+ * Une ligne n'existe que pour un repas coché : l'absence vaut « pas pris », et
+ * décocher supprime la ligne. On ne garde donc jamais de « false » qui
+ * encombrerait la base sans rien dire de plus.
+ */
+export interface MealLogRow {
+  id?: number;
+  /** `YYYY-MM-DD`. */
+  date: string;
+  /** L'identifiant stable du repas (`Meal.id`), jamais son libellé. */
+  mealId: string;
+  /** Horodatage de la coche, pour départager deux appareils un jour. */
+  at: string;
 }
 
 /** Premier lundi à partir d'une date incluse — conversion d'ancre de la v5. */

@@ -286,6 +286,75 @@ describe('la composition se corrige sous l’aliment RÉELLEMENT mangé', () => 
   });
 });
 
+describe('l’aliment remplaçant apporte AUSSI son état et sa famille', () => {
+  /*
+   * L'état cru/cuit est la donnée qui évite de compter le triple : 100 g de riz
+   * cru valent 350 kcal, cuits 130. La ligne l'affiche, et la feuille de
+   * remplacement l'affiche. Après un remplacement, c'est l'état de l'aliment
+   * RÉELLEMENT mangé qui doit s'afficher — pas celui de la ligne du plan, qui
+   * ne décrit plus rien.
+   */
+  it('remplacer le féculent cuit par du riz cru dit « cru »', () => {
+    const ov: FoodOverrides = { [feculent.id]: { productId: 'rizCru' } };
+    const e = effectiveItem(feculent, ov);
+    expect(e.label).toBe('Riz cru');
+    expect(e.referenceState).toBe('cru');
+  });
+
+  /*
+   * La famille sert à ouvrir la feuille de remplacement sur la bonne liste.
+   * Après une viande remplacée par une banane, rouvrir « Remplacer » doit
+   * proposer des fruits, pas des protéines.
+   */
+  it('la famille suit aussi', () => {
+    const ov: FoodOverrides = { [viande.id]: { productId: 'banane' } };
+    const e = effectiveItem(viande, ov);
+    expect(e.category).toBe('fruit');
+    expect(e.referenceState).toBe('na');
+  });
+
+  it('sans remplacement, rien ne change', () => {
+    expect(effectiveItem(feculent, {}).referenceState).toBe('cuit');
+    expect(effectiveItem(viande, {}).category).toBe('proteine');
+  });
+
+  /*
+   * Garde-fou général : après un remplacement, tout ce qui décrit l'aliment
+   * doit venir du remplaçant. Un champ oublié ici est un champ qui mentira à
+   * l'écran, et la liste des champs grandira encore.
+   */
+  it('tout ce qui décrit l’aliment vient du remplaçant', () => {
+    for (const id of ['saumon', 'rizCru', 'banane', 'pates', 'avocat'] as const) {
+      const f = FOOD_LIBRARY[id]!;
+      const e = effectiveItem(viande, { [viande.id]: { productId: id } });
+      expect(
+        {
+          label: e.label,
+          unit: e.unit,
+          per: e.per,
+          kcal: e.kcal,
+          proteinG: e.proteinG,
+          carbsG: e.carbsG,
+          fatG: e.fatG,
+          referenceState: e.referenceState,
+          category: e.category,
+        },
+        f.label,
+      ).toEqual({
+        label: f.label,
+        unit: f.unit,
+        per: f.per,
+        kcal: f.kcal,
+        proteinG: f.proteinG,
+        carbsG: f.carbsG,
+        fatG: f.fatG,
+        referenceState: f.referenceState,
+        category: f.category,
+      });
+    }
+  });
+});
+
 describe('validation d’un aliment personnalisé', () => {
   it('signale des kcal que les macros ne peuvent pas produire', () => {
     const faux: FoodItem = { ...viande, kcal: 500, proteinG: 80, carbsG: 80, fatG: 50 };

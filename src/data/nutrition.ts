@@ -92,9 +92,41 @@ export interface FoodItem {
   referenceState: ReferenceState;
   /** Famille, pour proposer d'abord les bons remplacements. */
   category: FoodCategory;
+  /**
+   * Posé quand la quantité a été ajustée par la PHASE du programme, et non à la
+   * main.
+   *
+   * Les deux ajustements ne doivent pas se confondre à l'écran : « MODIFIÉ »
+   * veut dire « tu as changé ça », et c'est lui que compte le bouton de remise
+   * à zéro. Un ajustement de deload n'est pas à lui, et le réinitialiser
+   * n'aurait aucun sens.
+   */
+  adjusted?: NutritionPhase;
 }
 
+/**
+ * Phase nutritionnelle d'une journée — ce qui s'ajoute au couple
+ * entraînement/repos.
+ *
+ * `deloadLight` : journée d'entraînement d'une semaine de deload, hors combine.
+ * Le volume tombe, donc la dépense aussi, mais c'est aussi une semaine de
+ * récupération : on ne coupe pas à proportion du volume.
+ */
+export type NutritionPhase = 'normal' | 'deloadLight';
+
 export interface Meal {
+  /**
+   * Identifiant stable de la prise, jamais son libellé.
+   *
+   * C'est lui qui relie « pris » ou « pas pris » à ce repas, un jour donné.
+   * Renommer « Avant 8 h 15 » en « Collation du matin » doit être sans
+   * conséquence ; renommer un identifiant effacerait silencieusement tout
+   * l'historique de ce repas.
+   *
+   * Le préfixe suit celui de ses lignes : `t.` jour d'entraînement, `r.` jour
+   * de repos, `x.` les deux.
+   */
+  id: string;
   /** « Réveil », « Déjeuner »… */
   name: string;
   /** Le détail tel qu'il est écrit dans le .md. */
@@ -197,6 +229,7 @@ function ligne(id: string, product: ProductId, qty: number): FoodItem {
 // ---------------------------------------------------------------------------
 
 const REVEIL: Meal = {
+  id: 't.reveil',
   name: 'Au lever — ≈ 6 h 45',
   detail: '3 œufs entiers + 3 tranches de pain complet + 1 banane',
   kcal: 584,
@@ -213,6 +246,7 @@ const REVEIL: Meal = {
  * portent le préfixe « x ».
  */
 const AVANT_COUPURE: Meal = {
+  id: 'x.avant815',
   name: 'Avant 8 h 15',
   detail: '200 g de skyr + 40 g de flocons d’avoine + 1 pomme, préparés la veille dans un bocal',
   kcal: 358,
@@ -230,6 +264,7 @@ const AVANT_COUPURE: Meal = {
  * petit-déjeuner distingue encore le jour de repos.
  */
 const MIDI: Meal = {
+  id: 'x.midi',
   name: 'Entre 11 h 45 et 13 h 15',
   detail: '180 g de protéine + 180 g de féculent (cuit) + 150 g de légumes + 10 g d’huile',
   kcal: 666,
@@ -244,6 +279,7 @@ const MIDI: Meal = {
 
 /* Identique aux deux paliers. */
 const AUTOUR_SEANCE: Meal = {
+  id: 'x.autour',
   name: '15 h 45 → après la séance',
   detail: 'Dès 15 h 45 : 1 banane + 0,5 L d’eau. Après la séance : shaker whey 30 g',
   kcal: 227,
@@ -252,6 +288,7 @@ const AUTOUR_SEANCE: Meal = {
 };
 
 const DINER: Meal = {
+  id: 't.diner',
   name: 'Dîner — ≈ 19 h - 19 h 30',
   detail: '120 g de protéine (ou 4 œufs) + 150 g de féculent (cuit) + 150 g de légumes + 10 g d’huile',
   kcal: 527,
@@ -283,6 +320,7 @@ const TRAIN: NutritionTarget = {
 // ---------------------------------------------------------------------------
 
 const REVEIL_REPOS: Meal = {
+  id: 'r.reveil',
   name: 'Au lever — ≈ 6 h 45',
   detail: '3 œufs entiers + 2 tranches de pain complet + 1 banane',
   kcal: 497,
@@ -295,6 +333,7 @@ const REVEIL_REPOS: Meal = {
 };
 
 const DINER_REPOS: Meal = {
+  id: 'r.diner',
   name: 'Dîner — ≈ 19 h - 19 h 30',
   detail: '120 g de protéine (ou 4 œufs) + 100 g de féculent (cuit) + 150 g de légumes + 10 g d’huile',
   kcal: 464,
@@ -503,4 +542,28 @@ export const FUEL_BY_TRAINING_DAY: Partial<Record<0 | 1 | 2 | 3 | 4 | 5 | 6, Fue
   1: 'standard',
   3: 'standard',
   6: 'standard',
-}
+};
+
+// ---------------------------------------------------------------------------
+// Semaines de deload (S4, S8) — programme Remuald
+// ---------------------------------------------------------------------------
+
+/**
+ * Ce qui baisse dans l'assiette pendant une semaine de deload : RIEN, ici.
+ *
+ * Le mécanisme vient de l'appli d'origine, où l'on allège les féculents des
+ * semaines de deload. Remuald, lui, est déjà en déficit (≈ 2 350 / 2 210 kcal) :
+ * couper encore pendant une semaine de récupération la rendrait la plus
+ * restrictive du programme. Les quantités restent donc celles du plan.
+ *
+ * Pour activer un allègement plus tard : une entrée par identifiant de LIGNE,
+ * par exemple `'x.midi.feculent': 150`.
+ */
+export const DELOAD_QUANTITIES: Readonly<Record<string, number>> = {};
+
+/** Le bandeau affiché dans l'écran Nutrition pendant une semaine de deload. */
+export const DELOAD_BANNER = {
+  title: 'SEMAINE ALLÉGÉE',
+  text:
+    'Entraînement allégé cette semaine, mais ton plan alimentaire ne change pas : tu es déjà en déficit, et la récupération en a besoin.',
+} as const;

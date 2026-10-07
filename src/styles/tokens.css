@@ -32,6 +32,19 @@
   --orange: #ff9f1c;
   --rouge: #ff5a4d;
 
+  /*
+   * --- Macros, pour les barres de composition ---
+   *
+   * Trois teintes catégorielles, validées sur le fond des cartes (--surface-2) :
+   * bande de luminosité, plancher de chroma, séparation daltonienne (ΔE 10,5 au
+   * pire, deutan) et contraste. Choisies LOIN du feu tricolore et de --accent :
+   * une barre de macros n'est ni une alerte ni un bouton, et réutiliser ces
+   * couleurs-là ferait lire un jugement là où il n'y a qu'une composition.
+   */
+  --macro-glucides: #3d8dc9;
+  --macro-proteines: #cf5a86;
+  --macro-lipides: #a87b22;
+
   /* --- Blocs (§2) --- */
   --bloc-test: #7ac4a0;
   --bloc-accumulation: #5aa7e0;

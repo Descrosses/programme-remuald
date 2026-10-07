@@ -37,6 +37,34 @@
   font-size: var(--fs-small);
 }
 
+/*
+ * Bandeau de phase — « semaine de deload ».
+ *
+ * Posé entre le titre et la première carte, avec un liseré d'accent : assez
+ * visible pour expliquer une portion qui a baissé toute seule, assez sobre pour
+ * ne pas passer pour une alerte. Il n'y a rien à corriger.
+ */
+.phaseNote {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 0 var(--pad) 14px;
+  padding: 10px 12px;
+  border-left: 3px solid var(--accent);
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+  background: var(--surface-2);
+  font-size: var(--fs-small);
+  color: var(--ink-2);
+}
+
+.phaseNote b {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+
 /* ------------------------------------------------------------- cartes -- */
 
 .card {
@@ -703,7 +731,7 @@
 
 .meal {
   display: flex;
-  align-items: baseline;
+  align-items: flex-start;
   justify-content: space-between;
   gap: 12px;
   padding: 11px 0;
@@ -729,6 +757,7 @@
   flex: 0 0 auto;
   font-size: var(--fs-small);
   color: var(--ink-2);
+  text-align: right;
 }
 
 .mealTotal {
@@ -920,6 +949,19 @@
   color: var(--rouge);
 }
 
+/*
+ * Quantité ajustée par la PHASE du programme, et non par Guillaume.
+ *
+ * Volontairement distinct de « MODIFIÉ » : les deux ne veulent pas dire la même
+ * chose, et c'est « MODIFIÉ » que compte le bouton de remise à zéro. Lui
+ * proposer de réinitialiser un ajustement qui n'est pas de lui n'aurait aucun
+ * sens.
+ */
+.foodBadgePhase {
+  background: var(--surface-2);
+  color: var(--accent);
+}
+
 /* --- Remplacer un aliment -------------------------------------------------- */
 
 /*
@@ -1018,4 +1060,198 @@
   font-size: 0.75rem;
   font-weight: 500;
   color: var(--ink-3);
+}
+
+/* --- Composition d'un repas en macros ------------------------------------- */
+
+.macroBlock {
+  margin-top: 8px;
+}
+
+/*
+ * La barre est TOUJOURS pleine : elle montre une composition, pas une
+ * progression. Pas de piste vide derrière, qui ferait croire qu'il manque
+ * quelque chose.
+ */
+.macroTrack {
+  display: flex;
+  gap: 2px; /* le fond passe entre les segments : ils ne se touchent jamais */
+  height: 8px;
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.macroFill {
+  height: 100%;
+  border-radius: 2px;
+}
+
+.macro_carbs {
+  background: var(--macro-glucides);
+}
+
+.macro_protein {
+  background: var(--macro-proteines);
+}
+
+.macro_fat {
+  background: var(--macro-lipides);
+}
+
+/*
+ * Les grammages, dans l'ordre des segments. Ils portent l'identité : la couleur
+ * ne fait que l'accélérer, elle ne la remplace pas.
+ */
+.macroLegend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+  margin-top: 6px;
+  font-size: 0.78rem;
+  color: var(--ink-2);
+}
+
+.macroItem {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.macroDot {
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+}
+
+.macroCle {
+  font-weight: 700;
+  color: var(--ink-3);
+}
+
+/* La part de la journée, sous les kcal du repas : les deux disent ce que ce
+   repas pèse, et se lisent ensemble. */
+.mealPart {
+  margin-top: 1px;
+  color: var(--ink-3);
+}
+
+/*
+ * La colonne de gauche d'un repas prend toute la place restante : sans ça, la
+ * barre de macros se calerait sur la largeur du nom du repas.
+ */
+.mealBody {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+/* --- Où en est la journée : ce qui a été pris sur ce qui était prévu ------- */
+
+.progressList {
+  display: grid;
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.progressHead {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 4px;
+  font-size: var(--fs-small);
+}
+
+.progressNom {
+  color: var(--ink-2);
+}
+
+.progressVal {
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.progressPrevu {
+  font-weight: 400;
+  color: var(--ink-3);
+}
+
+/*
+ * Une piste VIDE derrière, contrairement à la barre de composition : c'est ce
+ * qui distingue « où j'en suis » de « de quoi c'est fait », sans un mot.
+ */
+.progressTrack {
+  height: 8px;
+  border-radius: 999px;
+  background: var(--surface-3);
+  overflow: hidden;
+}
+
+.progressFill {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+}
+
+/* Un dépassement ne se ravale pas à « plein » : il change de couleur. */
+.progressOver {
+  background: var(--orange);
+}
+
+/* --- Carte « Aujourd'hui » et coche d'un repas ----------------------------- */
+
+.suiviHead {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.suiviReset {
+  min-height: 0;
+  padding: 2px 0;
+  background: none;
+  font-size: var(--fs-small);
+  color: var(--ink-3);
+  text-decoration: underline;
+}
+
+/*
+ * La coche. Un cercle vide tant que le repas n'est pas pris, plein ensuite :
+ * l'état se lit à un mètre, sans lire le texte.
+ *
+ * Le bouton garde les 48 px de cible tactile, non négociables ; seule la
+ * pastille est réduite. Une pastille de 48 px écraserait le nom du repas.
+ */
+.mealTick {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  width: var(--tap);
+  height: var(--tap);
+  min-width: 0;
+  margin: -8px -12px -8px -4px;
+  padding: 0;
+  border: 0;
+  background: none;
+}
+
+.mealTickDot {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border: 2px solid var(--line);
+  border-radius: 999px;
+  font-size: 0.95rem;
+  font-weight: 700;
+  line-height: 1;
+  color: transparent;
+}
+
+.mealTickOn {
+  border-color: var(--vert);
+  background: var(--vert);
+  color: var(--ink-on-accent);
 }

@@ -195,6 +195,21 @@ function FoodLine({
               modifié
             </span>
           )}
+          {/*
+            Deux badges, deux sens. « modifié » veut dire « tu as changé ça »,
+            et c'est lui que compte le bouton de remise à zéro. « deload » dit
+            que c'est le programme qui a allégé la portion cette semaine : il
+            n'y a rien à réinitialiser, et confondre les deux ferait proposer
+            d'annuler un ajustement qui n'est pas de lui.
+          */}
+          {courant.adjusted === 'deloadLight' && (
+            <span
+              className={`${styles.foodBadge} ${styles.foodBadgePhase}`}
+              title="Portion allégée pour la semaine de deload"
+            >
+              deload
+            </span>
+          )}
           {ligneDouteuse && (
             <span
               className={`${styles.foodBadge} ${styles.foodBadgeAlerte}`}

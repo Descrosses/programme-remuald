@@ -11,6 +11,7 @@
  */
 
 import {
+  DELOAD_QUANTITIES,
   FUEL_ADVICE,
   FUEL_BY_TRAINING_DAY,
   MEALS_GAP_TOLERANCE_PCT,
@@ -18,10 +19,13 @@ import {
   type FoodItem,
   type FuelAdvice,
   type Meal,
+  type NutritionPhase,
   type NutritionTarget,
 } from '../data/nutrition';
 import { FOOD_LIBRARY } from '../data/foodLibrary';
-import type { DayIndex } from '../data/types';
+import { WEEK_BLOCKS } from '../data/program';
+import { isCombineDay } from '../data/testSessions';
+import type { DayIndex, WeekIndex } from '../data/types';
 
 /** Une pesée du matin, et éventuellement le tour de taille du jour. */
 export interface Measurement {
@@ -240,6 +244,175 @@ export function fuelForToday(day: DayIndex | null): FuelAdvice {
   return FUEL_ADVICE[FUEL_BY_TRAINING_DAY[day] ?? 'standard'];
 }
 
+// ---------------------------------------------------------------------------
+// Phase du programme — ce que la périodisation change dans l'assiette
+// ---------------------------------------------------------------------------
+
+/**
+ * La phase nutritionnelle d'une journée donnée.
+ *
+ * ── Elle se lit de la périodisation, elle ne la recopie pas ────────────────
+ *
+ * La phase vient de `WEEK_BLOCKS` et du calendrier des combines. Écrire
+ * « semaines 4 et 8 » en dur créerait une deuxième vérité sur le programme :
+ * le jour où la périodisation bouge, l'alimentation suivrait encore l'ancienne.
+ *
+ * C'est aussi ce qui règle la semaine 12 toute seule, sans cas particulier :
+ * son bloc est `taper`, pas `deload`. Le volume y baisse, mais les tests de
+ * performance demandent une disponibilité énergétique entière, et la règle le
+ * donne sans qu'on ait à l'écrire.
+ *
+ * ── Les deux cas ───────────────────────────────────────────────────────────
+ *
+ *   semaine de deload,     → `normal`. Le samedi et le dimanche de la semaine 8
+ *   jour de combine          portent des tests : une journée où l'on cherche
+ *                            une performance se mange comme une journée
+ *                            d'entraînement normale.
+ *   semaine de deload,     → `deloadLight`, sur les DEUX paliers. Le jour de
+ *   tout autre jour          repos baisse deux fois moins que le jour
+ *                            d'entraînement : il part déjà plus bas,       
+ *                            et y empiler une grosse coupe ferait d'une semaine
+ *                            de récupération la plus restrictive du programme.
+ *
+ * `day` vaut `null` les jours sans séance. Ils restent concernés — on est bien
+ * dans la semaine de deload — et c'est le palier repos, avec ses propres
+ * quantités allégées, qui s'applique alors.
+ */
+export function phaseForDay(week: WeekIndex | null, day: DayIndex | null): NutritionPhase {
+  if (week === null) return 'normal';
+  if (WEEK_BLOCKS[week] !== 'deload') return 'normal';
+  if (day !== null && isCombineDay(week, day)) return 'normal';
+  return 'deloadLight';
+}
+
+/**
+ * Le palier tel que la phase le modifie — mêmes aliments, quelques quantités.
+ *
+ * ── Pourquoi un palier dérivé plutôt qu'un paramètre de plus ───────────────
+ *
+ * Tout le calcul existant part des lignes d'un repas : `itemMacros`,
+ * `mealMacros`, `mealsTotal`, l'écart à la cible, le remplacement d'un aliment,
+ * les corrections d'étiquette. Ajouter la phase à chacun aurait demandé de la
+ * faire traverser six fonctions sans rien y gagner.
+ *
+ * On produit donc un palier normal, dont seules des quantités diffèrent, et
+ * tout le reste continue de fonctionner sans le savoir. Les totaux se
+ * recalculent par le même chemin qu'avant.
+ *
+ * Hors deload, c'est l'objet d'origine qui est rendu, à l'identique : la
+ * fonction est alors strictement inerte.
+ *
+ * ── Les corrections saisies passent par-dessus ────────────────────────
+ *
+ * Elles s'appliquent plus tard, dans `effectiveItem`, et par identifiant de
+ * ligne. Une quantité saisie à la main gagne donc toujours sur
+ * l'ajustement automatique — ce qui est le bon ordre : l'appli propose, l'utilisateur
+ * tranche.
+ */
+export function targetForPhase(
+  target: NutritionTarget,
+  phase: NutritionPhase,
+  quantites: Readonly<Record<string, number>> = DELOAD_QUANTITIES,
+): NutritionTarget {
+  if (phase === 'normal') return target;
+  // Aucune ligne de ce palier n'est allégée : le palier reste l'objet d'origine.
+  if (!target.meals.some((m) => (m.items ?? []).some((i) => i.id in quantites))) return target;
+
+  const meals = target.meals.map((m) => repasAjuste(m, phase, quantites));
+  /*
+   * Les quatre macros de la cible sont RECALCULÉES, pas recopiées.
+   *
+   * Sans ça, l'écran comparerait des repas allégés à la cible d'une journée
+   * normale et annoncerait un déficit de 200 kcal à chaque jour de deload —
+   * une alerte sur un plan qui fait exactement ce qu'on lui demande.
+   */
+  const total = somme4(meals.map((m) => mealMacros(m)));
+  return {
+    ...target,
+    meals,
+    kcal: Math.round(total.kcal),
+    proteinG: Math.round(total.proteinG),
+    carbsG: Math.round(total.carbsG),
+    fatG: Math.round(total.fatG),
+  };
+}
+
+/** Un repas dont les lignes concernées portent leur quantité de deload. */
+function repasAjuste(
+  meal: Meal,
+  phase: NutritionPhase,
+  quantites: Readonly<Record<string, number>>,
+): Meal {
+  if (!meal.items?.some((i) => quantites[i.id] !== undefined)) return meal;
+
+  const items = meal.items.map((i) => {
+    const qty = quantites[i.id];
+    return qty === undefined || qty === i.qty ? i : { ...i, qty, adjusted: phase };
+  });
+  const m = mealMacros({ ...meal, items });
+  return { ...meal, items, kcal: m.kcal, proteinG: m.proteinG };
+}
+
+function somme4(macros: Macros[]): Macros {
+  return macros.reduce((a, b) => somme(a, b), ZERO);
+}
+
+// ---------------------------------------------------------------------------
+// Ce qui a réellement été mangé
+// ---------------------------------------------------------------------------
+
+/**
+ * Le total des repas cochés comme pris.
+ *
+ * ── Pourquoi rien de plus n'est saisi ───────────────────────────────────────
+ *
+ * Les corrections de Guillaume SONT déjà ce qu'il a mangé : s'il a remplacé le
+ * poulet par du saumon et pesé 400 g de riz au lieu de 320, le plan effectif
+ * dit exactement son assiette. Lui redemander aliment par aliment ce qu'il
+ * vient de corriger serait lui faire saisir deux fois la même chose — et sur un
+ * chantier, la deuxième saisie n'arrive jamais.
+ *
+ * Cocher un repas dit donc « celui-là, je l'ai pris », et ses macros effectives
+ * entrent dans la journée. Rien n'est figé au moment de la coche : corriger une
+ * étiquette après coup corrige aussi ce qui a été compté, ce qui est le bon
+ * sens — l'étiquette n'a pas changé entre-temps, c'est la connaissance qu'on en
+ * avait.
+ */
+export function consumedTotal(
+  target: NutritionTarget,
+  eaten: ReadonlySet<string>,
+  overrides: FoodOverrides = {},
+  library: Catalogue = FOOD_LIBRARY,
+): Macros {
+  return arrondir(
+    target.meals
+      .filter((m) => eaten.has(m.id))
+      .reduce((acc, m) => somme(acc, mealMacros(m, overrides, library)), ZERO),
+  );
+}
+
+/** Ce qu'il reste à manger pour atteindre le plan. Négatif = dépassé. */
+export function remainingTotal(planned: Macros, consumed: Macros): Macros {
+  return {
+    kcal: planned.kcal - consumed.kcal,
+    proteinG: planned.proteinG - consumed.proteinG,
+    carbsG: planned.carbsG - consumed.carbsG,
+    fatG: planned.fatG - consumed.fatG,
+  };
+}
+
+/**
+ * Où en est la journée sur une macro : la part consommée du prévu.
+ *
+ * Bornée à 200 % et non à 100 : un dépassement doit se VOIR, pas se faire
+ * ravaler à « plein ». Au-delà du double, la barre ne dit plus rien d'utile et
+ * le chiffre écrit à côté prend le relais.
+ */
+export function progressPct(consumed: number, planned: number): number {
+  if (!Number.isFinite(consumed) || !Number.isFinite(planned) || planned <= 0) return 0;
+  return Math.min(200, Math.round((Math.max(0, consumed) / planned) * 100));
+}
+
 /**
  * Densité du féculent cuit retenue par le plan : 1 kcal par gramme.
  *
@@ -340,6 +513,15 @@ export function effectiveItem(
         proteinG: remplacant.proteinG,
         carbsG: remplacant.carbsG,
         fatG: remplacant.fatG,
+        /*
+         * L'état et la famille viennent du remplaçant, eux aussi.
+         *
+         * Ils étaient oubliés : remplacer « Riz cuit » par « Riz cru » laissait
+         * la ligne afficher « cuit » alors qu'on y avait mis du cru — c'est-à-
+         * dire la seule chose que cet état existe pour éviter. Et rouvrir la
+         * feuille de remplacement après un poulet devenu banane proposait des
+         * protéines, puisque la famille était restée celle du plan.
+         */
         referenceState: remplacant.referenceState,
         category: remplacant.category,
         ...(remplacant.hint !== undefined ? { hint: remplacant.hint } : {}),
@@ -371,7 +553,9 @@ export interface FoodLike {
   proteinG: number;
   carbsG: number;
   fatG: number;
+  /** Pesé cru ou cuit — affiché sur la ligne, et au moment du choix. */
   referenceState: FoodItem['referenceState'];
+  /** Famille, qui décide de la liste ouverte au remplacement suivant. */
   category: FoodItem['category'];
   hint?: string;
 }

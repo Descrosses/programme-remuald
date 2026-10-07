@@ -10,15 +10,19 @@ import {
   TARGET_GAIN_KG_PER_WEEK,
   type DayKind,
 } from '../data/nutrition';
-import type { DayIndex } from '../data/types';
+import type { DayIndex, WeekIndex } from '../data/types';
 import { humanDate } from '../engine/calendar';
 import { fr } from '../engine/format';
 import {
+  consumedTotal,
   fuelForToday,
   gapVerdict,
   mealMacros,
   mealsGap,
   mealsTotal,
+  phaseForDay,
+  remainingTotal,
+  targetForPhase,
   type FoodOverrides,
   starchToCloseGap,
   latestWaist,
@@ -30,16 +34,22 @@ import {
 import {
   allCustomFoods,
   allFoodOverrides,
+  clearMealsEatenOn,
+  mealsEatenOn,
+  saveCustomFood,
+  setMealEaten,
   allMeasurements,
   getMeasurement,
   resetFoodOverrides,
-  saveCustomFood,
   saveFoodOverride,
   saveMeasurement,
 } from '../db/repo';
 import { MealItems } from '../components/MealItems';
 import { FOOD_LIBRARY, type LibraryFood } from '../data/foodLibrary';
-import { MEALS_GAP_TOLERANCE_PCT } from '../data/nutrition';
+import { DELOAD_BANNER, MEALS_GAP_TOLERANCE_PCT } from '../data/nutrition';
+import { MacroBar } from '../components/MacroBar';
+import { MacroProgress } from '../components/MacroProgress';
+import { shareOfDay } from '../engine/macroBar';
 import styles from './Screens.module.css';
 
 /**
@@ -57,15 +67,20 @@ import styles from './Screens.module.css';
 export function NutritionScreen({
   todayKind,
   todayDay,
+  todayWeek,
 }: {
   todayKind: DayKind;
   /** Jour de programme de la séance du jour, `null` si repos. */
   todayDay: DayIndex | null;
+  /** Semaine de programme du jour, `null` hors programme. */
+  todayWeek: WeekIndex | null;
 }) {
   const [rows, setRows] = useState<Measurement[] | null>(null);
   const [overrides, setOverrides] = useState<FoodOverrides>({});
   /** Les aliments saisis à la main, proposés au remplacement. */
   const [customs, setCustoms] = useState<LibraryFood[]>([]);
+  /** Les repas cochés comme pris aujourd'hui, par identifiant. */
+  const [pris, setPris] = useState<ReadonlySet<string>>(new Set());
   const [kind, setKind] = useState<DayKind>(todayKind);
   const [todayRow, setTodayRow] = useState<{ weightKg: number | null; waistCm: number | null }>({
     weightKg: null,
@@ -79,6 +94,7 @@ export function NutritionScreen({
     setRows(all.map((r) => ({ date: r.date, weightKg: r.weightKg, waistCm: r.waistCm })));
     setOverrides(await allFoodOverrides());
     setCustoms(await chargerCustoms());
+    setPris(await mealsEatenOn(todayIso));
     const t = await getMeasurement(todayIso);
     setTodayRow({ weightKg: t?.weightKg ?? null, waistCm: t?.waistCm ?? null });
   }
@@ -104,17 +120,47 @@ export function NutritionScreen({
 
   if (!rows) return <div className={styles.loading}>Chargement…</div>;
 
-  const target = NUTRITION_TARGETS[kind];
+  /*
+   * La phase de la journée — ce que la périodisation change dans l'assiette.
+   *
+   * Elle s'applique aux DEUX paliers : en semaine de deload, le jour de repos
+   * baisse aussi, simplement deux fois moins. Chaque palier porte ses propres
+   * quantités allégées, donc le même appel suffit pour les deux.
+   */
+  const phase = phaseForDay(todayWeek, todayDay);
+  const target = targetForPhase(NUTRITION_TARGETS[kind], phase);
   const totalRepas = mealsTotal(target, overrides, catalogue);
   const ecart = mealsGap(target, overrides, catalogue);
   const verdict = gapVerdict(target, overrides, MEALS_GAP_TOLERANCE_PCT, catalogue);
+  /*
+   * Ce qui a été pris, et ce qu'il reste. Calculés sur le palier CONSULTÉ, et
+   * la carte ne s'affiche que lorsqu'il est celui du jour : comparer ce qu'on a
+   * mangé à la journée type de l'autre palier ne voudrait rien dire.
+   */
+  const consomme = consumedTotal(target, pris, overrides, catalogue);
+  /*
+   * La référence est le plan PRESCRIT, sans les corrections de Guillaume.
+   *
+   * Avec elles, la cible monterait en même temps que l'assiette : peser 900 g
+   * de riz au lieu de 250 ferait monter le « prévu » d'autant, et la barre
+   * afficherait 100 % quoi qu'il arrive. Un dépassement ne se verrait jamais.
+   *
+   * La phase, elle, EST dans la référence : une semaine de deload prescrit
+   * moins, et c'est à ce moins-là qu'on se compare.
+   */
+  const prevu = mealsTotal(target);
+  const restant = remainingTotal(prevu, consomme);
   /*
    * Le carburant parle du JOUR, pas du palier consulté : basculer le sélecteur
    * pour regarder l'autre journée type ne doit pas faire croire que la séance
    * a changé. La carte reste donc sur aujourd'hui.
    */
   const carburant = fuelForToday(todayDay);
-  const baseAujourdhui = mealsTotal(NUTRITION_TARGETS[todayKind], overrides, catalogue);
+  const baseAujourdhui = mealsTotal(
+    targetForPhase(NUTRITION_TARGETS[todayKind], phase),
+    overrides,
+    catalogue,
+  );
   const trend = weightTrend(rows, todayIso);
   const advice = nutritionAdvice(rows, todayIso);
   const waist = latestWaist(rows);
@@ -155,6 +201,18 @@ export function NutritionScreen({
         </p>
       </header>
 
+      {/*
+        Bandeau de deload — discret, et seulement quand il a quelque chose à
+        dire. Il explique un chiffre qui a bougé tout seul : sans lui, les
+        portions allégées ressembleraient à un bug.
+      */}
+      {phase === 'deloadLight' && (
+        <div className={styles.phaseNote}>
+          <b>{DELOAD_BANNER.title}</b>
+          <span>{DELOAD_BANNER.text}</span>
+        </div>
+      )}
+
       {/* --- 1. Référence du jour ------------------------------------------ */}
       <section className={styles.card}>
         {/*
@@ -179,22 +237,77 @@ export function NutritionScreen({
             {kind === todayKind ? 'Ce que tes repas totalisent' : 'Autre palier'} · {target.label}
           </div>
         </div>
+        {/* Même ordre que la barre juste en dessous — glucides, protéines,
+            lipides. Deux ordres différents pour la même information se lisent
+            comme deux informations. */}
         <div className={styles.macros}>
-          <div className={styles.macro}>
-            <b>{totalRepas.proteinG} g</b>
-            <span>Protéines</span>
-          </div>
           <div className={styles.macro}>
             <b>{totalRepas.carbsG} g</b>
             <span>Glucides</span>
+          </div>
+          <div className={styles.macro}>
+            <b>{totalRepas.proteinG} g</b>
+            <span>Protéines</span>
           </div>
           <div className={styles.macro}>
             <b>{totalRepas.fatG} g</b>
             <span>Lipides</span>
           </div>
         </div>
+        {/* De quoi la journée est faite : les trois nombres ci-dessus disent
+            des grammes, la barre dit des proportions. Un gramme de lipide pèse
+            plus du double d'un gramme de glucide, donc les deux ne se déduisent
+            pas l'un de l'autre. */}
+        <MacroBar macros={totalRepas} labels="parts" />
         <p className={styles.fieldHint}>{target.note}</p>
       </section>
+
+      {/* --- 2. Où en est la journée ---------------------------------------- */}
+      {kind === todayKind && (
+        <section className={styles.card}>
+          <div className={styles.suiviHead}>
+            <h2 className={styles.cardTitle}>Aujourd’hui</h2>
+            {pris.size > 0 && (
+              <button
+                type="button"
+                className={styles.suiviReset}
+                onClick={() =>
+                  void (async () => {
+                    await clearMealsEatenOn(todayIso);
+                    setPris(await mealsEatenOn(todayIso));
+                  })()
+                }
+              >
+                Tout décocher
+              </button>
+            )}
+          </div>
+          {/*
+            Le grand chiffre est ce qui RESTE, pas ce qui a été pris : c'est la
+            question qu'on se pose en ouvrant l'appli à 16 h. Un dépassement
+            s'affiche comme tel plutôt qu'en négatif, qui se lit mal d'un
+            coup d'œil.
+          */}
+          <div className={styles.keyStat}>
+            <div className={styles.keyStatValue}>
+              {Math.abs(restant.kcal).toLocaleString('fr-FR')}
+              <span className={styles.keyStatUnit}>
+                {restant.kcal < 0 ? ' kcal de trop' : ' kcal restantes'}
+              </span>
+            </div>
+            <div className={styles.keyStatLabel}>
+              {consomme.kcal.toLocaleString('fr-FR')} kcal pris sur{' '}
+              {prevu.kcal.toLocaleString('fr-FR')} · {pris.size} repas sur{' '}
+              {target.meals.length}
+            </div>
+          </div>
+          <MacroProgress consumed={consomme} planned={prevu} />
+          <p className={styles.fieldHint}>
+            Coche un repas quand tu l’as pris. Ce qui est compté, ce sont tes
+            quantités et tes remplacements — rien à ressaisir.
+          </p>
+        </section>
+      )}
 
       {/* --- Carburant du jour : une recommandation, jamais un ajout auto --- */}
       <section className={`${styles.card} ${styles.fuelCard} ${styles[`fuel_${carburant.level}`]}`}>
@@ -272,10 +385,18 @@ export function NutritionScreen({
       <section className={styles.card}>
         <h2 className={styles.cardTitle}>Repas types</h2>
         <div className={styles.mealList}>
-          {target.meals.map((m) => (
+          {target.meals.map((m) => {
+            /* Calculé une fois : la ligne de kcal et la barre doivent parler du
+               même repas, remplacements et étiquettes corrigées compris. */
+            const macros = mealMacros(m, overrides, catalogue);
+            return (
             <div key={m.name} className={styles.meal}>
-              <div>
+              <div className={styles.mealBody}>
                 <div className={styles.mealName}>{m.name}</div>
+                {/* De quoi ce repas est fait, et ce qu'il pèse dans la journée.
+                    Le résumé d'abord, le détail en dessous — et après un
+                    remplacement d'aliment, la barre bouge sous les yeux. */}
+                <MacroBar macros={macros} />
                 {/*
                   La phrase du .md disparaît dès que le repas est décomposé :
                   elle dit « 280 g de skyr » alors que la ligne en dessous peut
@@ -319,11 +440,48 @@ export function NutritionScreen({
                   }}
                 />
               </div>
+              {/* Les deux nombres qui disent ce que ce repas PÈSE, ensemble :
+                  ses calories, et sa part de la journée. */}
               <div className={`${styles.mealKcal} tnum`}>
-                {mealMacros(m, overrides, catalogue).kcal} kcal
+                <div>{macros.kcal} kcal</div>
+                <div className={styles.mealPart}>
+                  {shareOfDay(macros.kcal, totalRepas.kcal)} %
+                </div>
               </div>
+              {/*
+                La coche n'apparaît que sur le palier du jour : cocher un repas
+                de la journée type qu'on n'est pas en train de vivre ne veut
+                rien dire. Une cible de 48 px, comme tout ce qui se touche.
+              */}
+              {kind === todayKind && (
+                <button
+                  type="button"
+                  className={styles.mealTick}
+                  aria-pressed={pris.has(m.id)}
+                  aria-label={`${m.name} — ${pris.has(m.id) ? 'pris' : 'pas encore pris'}`}
+                  onClick={() =>
+                    void (async () => {
+                      await setMealEaten(todayIso, m.id, !pris.has(m.id));
+                      setPris(await mealsEatenOn(todayIso));
+                    })()
+                  }
+                >
+                  {/* Le bouton fait 48 px pour le pouce, le cercle 26 pour
+                      l'œil : une pastille de la taille de la cible tactile
+                      écraserait le nom du repas à côté. */}
+                  <span
+                    className={`${styles.mealTickDot} ${
+                      pris.has(m.id) ? styles.mealTickOn : ''
+                    }`}
+                    aria-hidden="true"
+                  >
+                    ✓
+                  </span>
+                </button>
+              )}
             </div>
-          ))}
+            );
+          })}
         </div>
         {/*
           On affiche la SOMME des repas listés, pas la cible. Les deux coïncident

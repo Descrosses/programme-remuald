@@ -257,7 +257,7 @@ describe('aliments modifiables', () => {
   it('un repas pas encore décomposé garderait les valeurs écrites du .md', () => {
     // Tous les repas sont décomposés aujourd'hui. Ce test protège le repli :
     // ajouter un repas sans ses aliments ne doit pas le compter pour zéro.
-    const brut: Meal = { name: 'Test', detail: '', kcal: 500, proteinG: 40 };
+    const brut: Meal = { id: 'test', name: 'Test', detail: '', kcal: 500, proteinG: 40 };
     expect(brut.items).toBeUndefined();
     expect(mealMacros(brut)).toEqual({
       kcal: 500,

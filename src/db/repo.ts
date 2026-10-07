@@ -17,6 +17,7 @@ import {
   type CombineRow,
   type CustomFoodRow,
   type ExerciseMediaRow,
+  type MealLogRow,
   type ExerciseNoteRow,
   type ExerciseReferenceRow,
   type ExerciseVideoLogRow,
@@ -674,4 +675,41 @@ export async function resetFoodOverrides(foodId?: string): Promise<void> {
   }
   const existing = await db.foodOverrides.where('foodId').equals(foodId).first();
   if (existing?.id !== undefined) await db.foodOverrides.delete(existing.id);
+}
+
+// ------------------------------------------------------- repas réellement pris --
+
+/**
+ * Les repas cochés ce jour-là, par identifiant.
+ *
+ * Un `Set` et non une liste : l'écran ne demande jamais « lesquels » mais
+ * « celui-ci, l'ai-je pris ? », et c'est la seule question qu'il pose par repas.
+ */
+export async function mealsEatenOn(date: string): Promise<Set<string>> {
+  const rows = await db.mealLog.where('date').equals(date).toArray();
+  return new Set(rows.map((r) => r.mealId));
+}
+
+/**
+ * Coche ou décoche un repas.
+ *
+ * Décocher SUPPRIME la ligne plutôt que d'y écrire un « false » : l'absence
+ * veut déjà dire « pas pris », et deux façons d'exprimer la même chose finissent
+ * toujours par se contredire.
+ */
+export async function setMealEaten(date: string, mealId: string, eaten: boolean): Promise<void> {
+  const existing = await db.mealLog.where('[date+mealId]').equals([date, mealId]).first();
+  if (!eaten) {
+    if (existing?.id !== undefined) await db.mealLog.delete(existing.id);
+    return;
+  }
+  if (existing) return;
+  const row: Omit<MealLogRow, 'id'> = { date, mealId, at: new Date().toISOString() };
+  await db.mealLog.add(row as MealLogRow);
+}
+
+/** Efface les coches d'une journée — le bouton « j'ai mal coché, je recommence ». */
+export async function clearMealsEatenOn(date: string): Promise<void> {
+  const rows = await db.mealLog.where('date').equals(date).toArray();
+  await db.mealLog.bulkDelete(rows.map((r) => r.id!).filter((id) => id !== undefined));
 }
