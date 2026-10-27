@@ -5,23 +5,27 @@
  * fichier JSON contient l'intégralité de l'historique, lisible et réimportable.
  */
 
-import { blobToDataUrl, dataUrlToBlob } from '../media/photo';
+import { blobToDataUrl, dataUrlToBlob } from "../media/photo";
 import {
   db,
   type CombineRow,
+  type CustomFoodRow,
+  type ExerciseNoteRow,
   type ExerciseVideoLogRow,
+  type FoodOverrideRow,
+  type MealLogRow,
   type MeasurementRow,
   type ReadinessRow,
   type SessionRow,
   type SetRow,
   type SettingsRow,
-} from './db';
+} from "./db";
 
 /** Version du format, pour qu'un export d'aujourd'hui reste lisible plus tard. */
 export const EXPORT_VERSION = 1;
 
 export interface ExportFile {
-  format: 'programme-remuald';
+  format: "programme-remuald";
   version: number;
   exportedAt: string;
   settings: SettingsRow | null;
@@ -33,6 +37,26 @@ export interface ExportFile {
   measurements?: MeasurementRow[];
   /** Traces de vidéo — quelques octets chacune, elles restent ici. */
   videoLog?: ExerciseVideoLogRow[];
+  /*
+   * Les quatre tables ci-dessous ne figuraient PAS dans la sauvegarde.
+   *
+   * Un export est la seule copie de secours de cette base. Une table qui n'y
+   * figure pas disparaît au premier changement de téléphone, sans message et
+   * sans qu'on s'en aperçoive : les remarques laissées sur chaque mouvement,
+   * les repas cochés, les aliments saisis à la main et les étiquettes
+   * corrigées partaient ainsi.
+   *
+   * Optionnelles, comme les autres : un fichier exporté avant ce correctif
+   * reste réimportable tel quel.
+   */
+  /** Remarques laissées sur un mouvement, séance par séance. */
+  exerciseNotes?: ExerciseNoteRow[];
+  /** Repas cochés comme pris. */
+  mealLog?: MealLogRow[];
+  /** Aliments saisis à la main. */
+  customFoods?: CustomFoodRow[];
+  /** Étiquettes d'aliments corrigées, et remplacements. */
+  foodOverrides?: FoodOverrideRow[];
   /**
    * Toujours `false`. Les photos ont leur propre fichier : voir
    * `exportPhotos()` et le commentaire qui l'accompagne.
@@ -57,10 +81,16 @@ export interface ExportFile {
  * reconnaît tout seul lequel des deux on lui donne.
  */
 export interface PhotoExportFile {
-  format: 'programme-remuald-photos';
+  format: "programme-remuald-photos";
   version: number;
   exportedAt: string;
-  progressPhotos: Array<{ week: number; date: string; dataUrl: string; width: number; height: number }>;
+  progressPhotos: Array<{
+    week: number;
+    date: string;
+    dataUrl: string;
+    width: number;
+    height: number;
+  }>;
   exerciseMedia: Array<{
     exerciseId: string;
     week: number;
@@ -81,19 +111,34 @@ export interface PhotoExportFile {
 }
 
 export async function exportAll(): Promise<ExportFile> {
-  const [settings, sessions, sets, readiness, combines, measurements, videoLog] =
-    await Promise.all([
-      db.settings.get(1),
-      db.sessions.toArray(),
-      db.sets.toArray(),
-      db.readiness.toArray(),
-      db.combines.toArray(),
-      db.measurements.toArray(),
-      db.exerciseVideoLog.toArray(),
-    ]);
+  const [
+    settings,
+    sessions,
+    sets,
+    readiness,
+    combines,
+    measurements,
+    videoLog,
+    exerciseNotes,
+    mealLog,
+    customFoods,
+    foodOverrides,
+  ] = await Promise.all([
+    db.settings.get(1),
+    db.sessions.toArray(),
+    db.sets.toArray(),
+    db.readiness.toArray(),
+    db.combines.toArray(),
+    db.measurements.toArray(),
+    db.exerciseVideoLog.toArray(),
+    db.exerciseNotes.toArray(),
+    db.mealLog.toArray(),
+    db.customFoods.toArray(),
+    db.foodOverrides.toArray(),
+  ]);
 
   return {
-    format: 'programme-remuald',
+    format: "programme-remuald",
     version: EXPORT_VERSION,
     exportedAt: new Date().toISOString(),
     settings: settings ?? null,
@@ -103,6 +148,10 @@ export async function exportAll(): Promise<ExportFile> {
     combines,
     measurements,
     videoLog,
+    exerciseNotes,
+    mealLog,
+    customFoods,
+    foodOverrides,
     photosIncluded: false,
   };
 }
@@ -115,7 +164,7 @@ export async function exportPhotos(): Promise<PhotoExportFile> {
     db.exerciseReference.toArray(),
   ]);
   return {
-    format: 'programme-remuald-photos',
+    format: "programme-remuald-photos",
     version: EXPORT_VERSION,
     exportedAt: new Date().toISOString(),
     progressPhotos: await Promise.all(
@@ -156,9 +205,9 @@ export function exportFileName(now = new Date()): string {
 }
 
 function download(content: string, filename: string): void {
-  const blob = new Blob([content], { type: 'application/json' });
+  const blob = new Blob([content], { type: "application/json" });
   const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
+  const a = document.createElement("a");
   a.href = url;
   a.download = filename;
   document.body.appendChild(a);
@@ -180,10 +229,16 @@ export async function downloadExport(): Promise<void> {
  * chaînes base64, les espaces ajoutent des mégaoctets pour une lisibilité dont
  * personne n'a l'usage. Rend la taille produite, pour l'annoncer.
  */
-export async function downloadPhotoExport(): Promise<{ bytes: number; count: number }> {
+export async function downloadPhotoExport(): Promise<{
+  bytes: number;
+  count: number;
+}> {
   const file = await exportPhotos();
   const json = JSON.stringify(file);
-  download(json, `programme-remuald-photos-${new Date().toISOString().slice(0, 10)}.json`);
+  download(
+    json,
+    `programme-remuald-photos-${new Date().toISOString().slice(0, 10)}.json`,
+  );
   return {
     bytes: new Blob([json]).size,
     count: file.progressPhotos.length + file.exerciseMedia.length,
@@ -197,6 +252,10 @@ export interface ImportReport {
   combines: number;
   measurements: number;
   videoLog: number;
+  exerciseNotes: number;
+  mealLog: number;
+  customFoods: number;
+  foodOverrides: number;
   settings: boolean;
 }
 
@@ -208,8 +267,8 @@ export interface PhotoImportReport {
 
 /** Ce que contient un fichier déposé — l'import s'adapte au lieu d'exiger. */
 export type AnyExportFile =
-  | { kind: 'données'; file: ExportFile }
-  | { kind: 'photos'; file: PhotoExportFile };
+  | { kind: "données"; file: ExportFile }
+  | { kind: "photos"; file: PhotoExportFile };
 
 /**
  * Reconnaît lequel des deux fichiers on vient de recevoir.
@@ -222,31 +281,40 @@ export function parseAnyExport(text: string): AnyExportFile {
   try {
     parsed = JSON.parse(text);
   } catch {
-    throw new Error('Ce fichier n’est pas du JSON valide.');
+    throw new Error("Ce fichier n’est pas du JSON valide.");
   }
-  if ((parsed as { format?: string })?.format === 'programme-remuald-photos') {
+  if ((parsed as { format?: string })?.format === "programme-remuald-photos") {
     const f = parsed as PhotoExportFile;
     return {
-      kind: 'photos',
+      kind: "photos",
       file: {
-        format: 'programme-remuald-photos',
+        format: "programme-remuald-photos",
         version: f.version ?? EXPORT_VERSION,
-        exportedAt: f.exportedAt ?? '',
+        exportedAt: f.exportedAt ?? "",
         progressPhotos: f.progressPhotos ?? [],
         exerciseMedia: f.exerciseMedia ?? [],
         exerciseReference: f.exerciseReference ?? [],
       },
     };
   }
-  return { kind: 'données', file: parseExport(text) };
+  return { kind: "données", file: parseExport(text) };
 }
 
 /** Remplace les photos par celles du fichier. Ne touche à aucune autre table. */
-export async function importPhotos(file: PhotoExportFile): Promise<PhotoImportReport> {
+export async function importPhotos(
+  file: PhotoExportFile,
+): Promise<PhotoImportReport> {
   const progress = await Promise.all(
     file.progressPhotos.map(async (p) => {
       const blob = await dataUrlToBlob(p.dataUrl);
-      return { week: p.week, date: p.date, width: p.width, height: p.height, blob, bytes: blob.size };
+      return {
+        week: p.week,
+        date: p.date,
+        width: p.width,
+        height: p.height,
+        blob,
+        bytes: blob.size,
+      };
     }),
   );
   const media = await Promise.all(
@@ -280,7 +348,7 @@ export async function importPhotos(file: PhotoExportFile): Promise<PhotoImportRe
   );
 
   await db.transaction(
-    'rw',
+    "rw",
     [db.progressPhotos, db.exerciseMedia, db.exerciseReference],
     async () => {
       await Promise.all([
@@ -307,21 +375,21 @@ export function parseExport(text: string): ExportFile {
   try {
     parsed = JSON.parse(text);
   } catch {
-    throw new Error('Ce fichier n’est pas du JSON valide.');
+    throw new Error("Ce fichier n’est pas du JSON valide.");
   }
   const f = parsed as Partial<ExportFile>;
-  if (f?.format !== 'programme-remuald') {
-    throw new Error('Ce fichier ne vient pas de cette application.');
+  if (f?.format !== "programme-remuald") {
+    throw new Error("Ce fichier ne vient pas de cette application.");
   }
-  if (typeof f.version !== 'number' || f.version > EXPORT_VERSION) {
+  if (typeof f.version !== "number" || f.version > EXPORT_VERSION) {
     throw new Error(
       `Ce fichier vient d’une version plus récente (${String(f.version)}). Mets l’application à jour.`,
     );
   }
   return {
-    format: 'programme-remuald',
+    format: "programme-remuald",
     version: f.version,
-    exportedAt: f.exportedAt ?? '',
+    exportedAt: f.exportedAt ?? "",
     settings: f.settings ?? null,
     sessions: f.sessions ?? [],
     sets: f.sets ?? [],
@@ -331,6 +399,10 @@ export function parseExport(text: string): ExportFile {
     // une erreur — il reste parfaitement réimportable.
     measurements: f.measurements ?? [],
     videoLog: f.videoLog ?? [],
+    exerciseNotes: f.exerciseNotes ?? [],
+    mealLog: f.mealLog ?? [],
+    customFoods: f.customFoods ?? [],
+    foodOverrides: f.foodOverrides ?? [],
     photosIncluded: false,
   };
 }
@@ -344,7 +416,7 @@ export function parseExport(text: string): ExportFile {
  */
 export async function importAll(file: ExportFile): Promise<ImportReport> {
   return db.transaction(
-    'rw',
+    "rw",
     [
       db.settings,
       db.sessions,
@@ -353,10 +425,18 @@ export async function importAll(file: ExportFile): Promise<ImportReport> {
       db.combines,
       db.measurements,
       db.exerciseVideoLog,
+      db.exerciseNotes,
+      db.mealLog,
+      db.customFoods,
+      db.foodOverrides,
     ],
     async () => {
       const measurements = file.measurements ?? [];
       const videoLog = file.videoLog ?? [];
+      const exerciseNotes = file.exerciseNotes ?? [];
+      const mealLog = file.mealLog ?? [];
+      const customFoods = file.customFoods ?? [];
+      const foodOverrides = file.foodOverrides ?? [];
       await Promise.all([
         db.sessions.clear(),
         db.sets.clear(),
@@ -364,6 +444,10 @@ export async function importAll(file: ExportFile): Promise<ImportReport> {
         db.combines.clear(),
         db.measurements.clear(),
         db.exerciseVideoLog.clear(),
+        db.exerciseNotes.clear(),
+        db.mealLog.clear(),
+        db.customFoods.clear(),
+        db.foodOverrides.clear(),
       ]);
       if (file.settings) await db.settings.put({ ...file.settings, id: 1 });
       await db.sessions.bulkAdd(file.sessions);
@@ -372,6 +456,10 @@ export async function importAll(file: ExportFile): Promise<ImportReport> {
       await db.combines.bulkAdd(file.combines);
       await db.measurements.bulkAdd(measurements);
       await db.exerciseVideoLog.bulkAdd(videoLog);
+      await db.exerciseNotes.bulkAdd(exerciseNotes);
+      await db.mealLog.bulkAdd(mealLog);
+      await db.customFoods.bulkAdd(customFoods);
+      await db.foodOverrides.bulkAdd(foodOverrides);
 
       return {
         sessions: file.sessions.length,
@@ -380,6 +468,10 @@ export async function importAll(file: ExportFile): Promise<ImportReport> {
         combines: file.combines.length,
         measurements: measurements.length,
         videoLog: videoLog.length,
+        exerciseNotes: exerciseNotes.length,
+        mealLog: mealLog.length,
+        customFoods: customFoods.length,
+        foodOverrides: foodOverrides.length,
         settings: file.settings !== null,
       };
     },
@@ -389,9 +481,25 @@ export async function importAll(file: ExportFile): Promise<ImportReport> {
 /** Efface tout l'historique. Les réglages sont conservés. */
 export async function resetHistory(): Promise<void> {
   await db.transaction(
-    'rw',
-    [db.sessions, db.sets, db.readiness, db.combines, db.measurements, db.exerciseVideoLog],
+    "rw",
+    [
+      db.sessions,
+      db.sets,
+      db.readiness,
+      db.combines,
+      db.measurements,
+      db.exerciseVideoLog,
+      db.exerciseNotes,
+      db.mealLog,
+    ],
     async () => {
+      /*
+       * Les remarques et les repas cochés partent avec l'historique : ils
+       * décrivent des séances et des journées, pas des réglages. Les aliments
+       * personnalisés et les étiquettes corrigées RESTENT — ce sont des
+       * préférences, et les resaisir après chaque remise à zéro serait une
+       * punition.
+       */
       await Promise.all([
         db.sessions.clear(),
         db.sets.clear(),
@@ -399,6 +507,8 @@ export async function resetHistory(): Promise<void> {
         db.combines.clear(),
         db.measurements.clear(),
         db.exerciseVideoLog.clear(),
+        db.exerciseNotes.clear(),
+        db.mealLog.clear(),
       ]);
     },
   );
@@ -413,7 +523,7 @@ export async function resetHistory(): Promise<void> {
  */
 export async function resetPhotos(): Promise<void> {
   await db.transaction(
-    'rw',
+    "rw",
     [db.progressPhotos, db.exerciseMedia, db.exerciseReference],
     async () => {
       await Promise.all([
